@@ -1,0 +1,27 @@
+school-uniform-backend/
+│
+├── src/                           # 源代码目录（主要开发在这里进行）
+│   ├── controllers/               # 控制器 - 处理请求和返回响应
+│   ├── models/                    # 数据模型 - 定义数据结构和数据库交互
+│   ├── routes/                    # 路由 - 定义API端点
+│   ├── middleware/                # 中间件 - 自定义中间件函数
+│   ├── services/                  # 服务层 - 处理业务逻辑
+│   ├── utils/                     # 工具函数 - 可复用的辅助函数
+│   ├── config/                    # 配置文件
+│   ├── types/                     # TypeScript 类型定义
+│   ├── validators/                # 数据验证器
+│   ├── tests/                     # 测试文件（可选，或放在根目录）
+        ├── api.types.ts
+        ├── database.type.ts
+        ├── index.ts
+│   └── app.ts                     # 应用入口文件
+│
+├── dist/                          # 编译后的 JavaScript 文件（自动生成）
+│
+├── node_modules/                  # 项目依赖
+├── .env                           # 环境变量文件
+├── .gitignore                     # Git 忽略规则
+├── package.json                   # 项目配置和依赖管理
+├── tsconfig.json                  # TypeScript 配置
+├── nodemon.json                   # Nodemon 配置（开发热重载）
+└── README.md                      # 项目说明文档
