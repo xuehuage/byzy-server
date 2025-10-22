@@ -13,8 +13,9 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     // 2. 检查Authorization格式
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
-        success: false,
-        message: 'Access denied. No valid token provided.'
+        "code": 401,
+        "message": "无效的token.",
+        "data": null
       });
     }
 
@@ -28,8 +29,9 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
   } catch (error) {
     // 令牌无效或过期
     return res.status(401).json({
-      success: false,
-      message: '无效的token.'
+      "code": 401,
+      "message": "无效的token.",
+      "data": null
     });
   }
 };
