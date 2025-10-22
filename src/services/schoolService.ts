@@ -19,13 +19,22 @@ const schoolService = {
   },
 
   /**
-   * 根据厂商ID查询所有学校
+   * 根据厂商ID查询所有学校（学校列表）
    */
   async getSchoolsByManufacturerId(manufacturerId: ManufacturerIdType): Promise<School[]> {
     if (!manufacturerId) {
       throw new Error('getSchoolsByManufacturerId manufacturerId is undefined!');
     }
     return SchoolModel.findByManufacturerId(manufacturerId);
+  },
+  /**
+   * 根据厂商ID查询所有学校(学校列表带年级信息)
+   */
+  async getSchoolsWithRelations(manufacturerId: number): Promise<School[]> {
+    if (!manufacturerId) {
+      throw new Error('厂商ID不能为空');
+    }
+    return SchoolModel.findSchoolsWithRelations(manufacturerId);
   },
 
   /**

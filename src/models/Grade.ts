@@ -74,18 +74,18 @@ class GradeModel {
    */
   static async findBySchoolId(schoolId: number): Promise<Grade[]> {
     const sql = `
-      SELECT id, name,  school_id, created_at, updated_at
-      FROM grades
-      WHERE school_id = ?
-    `;
+    SELECT id, name, school_id, created_at, updated_at
+    FROM grades
+    WHERE school_id = ?
+    ORDER BY id ASC
+  `;
     const grades = await executeQuery<Grade[]>(sql, [schoolId]);
 
-    // 关联查询每个年级下的班级（补充旧版缺失的班级信息）
-    for (const grade of grades) {
-      grade.classes = await ClassModel.findByGradeId(grade.id); // 假设 ClassModel 有此方法
-    }
-
-    return grades;
+    // 为每个年级查询班级
+    return Promise.all(grades.map(async (grade) => ({
+      ...grade,
+      classes: await ClassModel.findByGradeId(grade.id)
+    })));
   }
 
   /**

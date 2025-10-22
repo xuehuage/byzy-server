@@ -63,6 +63,44 @@ export const schoolController = {
       return sendError(res, '获取学校列表失败', 500);
     }
   },
+  /**
+   * 获取厂商管理的所有学校（含年级和班级信息）
+   */
+  getSchoolsWithRelations: async (req: Request, res: Response) => {
+    try {
+      const currentUser = req.user;
+      if (!currentUser) {
+        return sendError(res, '当前用户未登录', 403);
+      }
+
+      // 确定厂商ID（复用现有权限逻辑）
+      let manufacturerId: number;
+      if (currentUser.role === 'super_admin') {
+        const queryId = Number(req.query.manufacturer_id);
+        console.log('req.query:', queryId)
+        if (isNaN(queryId)) {
+          return sendError(res, '参数id必须为数字', 400);
+        }
+        manufacturerId = queryId;
+      } else {
+        if (!currentUser.manufacturerId) {
+          return sendError(res, '厂商用户未关联厂商信息', 403);
+        }
+        manufacturerId = currentUser.manufacturerId;
+      }
+
+      // 调用服务层获取带关联的数据
+      const schools = await schoolService.getSchoolsWithRelations(manufacturerId);
+
+      return sendSuccess(res, {
+        count: schools.length,
+        schools
+      }, '学校及关联信息获取成功');
+    } catch (error) {
+      console.error('获取学校及关联信息失败:', error);
+      return sendError(res, '获取学校及关联信息失败', 500);
+    }
+  },
 
   /**
    * 获取单个学校详情
@@ -115,13 +153,6 @@ export const schoolController = {
   getSchoolsByConditions: async (req: Request, res: Response) => {
     try {
       const { manufacturer_id, name, status } = req.query;
-      console.log('接收的学校查询参数:', {
-        manufacturer_id,
-        name,
-        status,
-        // 补充打印用户信息（判断是否自动填充厂商ID）
-        userManufacturerId: req.user?.manufacturerId
-      });
 
       // 处理参数类型转换
       const queryParams = {

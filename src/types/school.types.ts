@@ -15,6 +15,8 @@ export interface School extends Timestamps {
   status: Status; // 学校状态（复用通用状态枚举）
   education_years: number; // 学年为几年
   type: number; // 0-幼儿园；1-小学；2-初中；3-高中
+  grades?: Grade[]; // 新增年级数组
+  classes?: Class[]; // 新增班级数组
 }
 
 export enum UniformType {

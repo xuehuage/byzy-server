@@ -58,38 +58,38 @@ class SchoolModel {
 
     const schoolId = (schoolResult as { insertId: number }).insertId;
 
-    // 处理年级和班级数据
-    if (schoolData.grades && schoolData.grades.length > 0) {
-      // 1. 对grade字段去重并分组
-      const gradeGroups = schoolData.grades.reduce((groups, item) => {
-        const key = item.grade;
-        if (!groups[key]) {
-          groups[key] = [];
-        }
-        groups[key].push(item.class);
-        return groups;
-      }, {} as Record<string, string[]>);
+    // // 处理年级和班级数据
+    // if (schoolData.grades && schoolData.grades.length > 0) {
+    //   // 1. 对grade字段去重并分组
+    //   const gradeGroups = schoolData.grades.reduce((groups, item) => {
+    //     const key = item.grades;
+    //     if (!groups[key]) {
+    //       groups[key] = [];
+    //     }
+    //     groups[key].push(item.classes);
+    //     return groups;
+    //   }, {} as Record<string, string[]>);
 
-      // 2. 遍历分组结果，创建年级和对应班级
-      for (const [gradeValue, classNames] of Object.entries(gradeGroups)) {
-        // 2.1 创建年级（使用grade值作为名称，level可根据需要转换）
-        const grade = await GradeModel.create({
-          name: gradeValue, // 年级名称格式化
-          school_id: schoolId,
-          classes: [] // 先空数组，后续单独创建班级
-        });
+    //   // 2. 遍历分组结果，创建年级和对应班级
+    //   for (const [gradeValue, classNames] of Object.entries(gradeGroups)) {
+    //     // 2.1 创建年级（使用grade值作为名称，level可根据需要转换）
+    //     const grade = await GradeModel.create({
+    //       name: gradeValue, // 年级名称格式化
+    //       school_id: schoolId,
+    //       classes: [] // 先空数组，后续单独创建班级
+    //     });
 
-        // 2.2 批量创建班级
-        await ClassModel.bulkCreate(
-          classNames.map((className, index) => ({
-            name: className,
-            class_order: index + 1, // 班级序号从1开始
-            grade_id: grade.id,
-            school_id: schoolId // 冗余存储学校ID，优化查询
-          }))
-        );
-      }
-    }
+    //     // 2.2 批量创建班级
+    //     await ClassModel.bulkCreate(
+    //       classNames.map((className, index) => ({
+    //         name: className,
+    //         class_order: index + 1, // 班级序号从1开始
+    //         grade_id: grade.id,
+    //         school_id: schoolId // 冗余存储学校ID，优化查询
+    //       }))
+    //     );
+    //   }
+    // }
 
     const newSchool = await this.findById(schoolId);
     if (!newSchool) {
@@ -100,7 +100,7 @@ class SchoolModel {
   /**
    * 根据厂商ID查询所有学校
    * @param manufacturerId 厂商ID
-   * @returns 学校数组（每个学校含年级列表）
+   * @returns 学校数组（
    */
   static async findByManufacturerId(manufacturerId: ManufacturerIdType): Promise<School[]> {
     const sql = `
@@ -120,6 +120,36 @@ class SchoolModel {
     }
 
     return schools;
+  }
+
+  /**
+   * 根据厂商ID查询所有学校
+   * @param manufacturerId 厂商ID
+   * @returns 学校数组（每个学校含年级列表）
+   */
+  static async findSchoolsWithRelations(manufacturerId: number): Promise<School[]> {
+
+    const schools = await this.findByManufacturerId(manufacturerId)
+
+    // 2. 为每个学校查询年级和班级
+    return Promise.all(schools.map(async (school) => {
+      // 2.1 查询学校所有年级（含班级）
+      const grades = await GradeModel.findBySchoolId(school.id);
+
+      // 2.2 提取所有班级并补充gradeId
+      const classes = grades.flatMap(grade =>
+        grade.classes?.map(cls => ({
+          ...cls,
+          gradeId: grade.id // 补充班级所属年级ID
+        })) || []
+      );
+
+      return {
+        ...school,
+        grades, // 仅保留需要的字段
+        classes // 匹配目标格式
+      };
+    }));
   }
 
   /**
@@ -321,6 +351,8 @@ class SchoolModel {
 
     return schools;
   }
+
+
 }
 
 export default SchoolModel;

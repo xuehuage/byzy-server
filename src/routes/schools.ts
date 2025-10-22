@@ -20,6 +20,8 @@ router.post(
 // 获取厂商的所有学校
 router.get('/list', schoolController.getManufacturerSchools);
 
+// 获取厂商的所有学校
+router.get('/list-with-class', schoolController.getSchoolsWithRelations);
 // 按条件查询学校列表
 router.get(
   '/search',

@@ -43,11 +43,11 @@ class ClassModel {
    */
   static async findByGradeId(gradeId: number): Promise<Class[]> {
     const sql = `
-      SELECT id, name, class_order, grade_id, created_at, updated_at
-      FROM classes
-      WHERE grade_id = ?
-      ORDER BY class_order ASC
-    `;
+    SELECT id, name, grade_id, school_id
+    FROM classes
+    WHERE grade_id = ?
+    ORDER BY id ASC
+  `;
     return executeQuery<Class[]>(sql, [gradeId]);
   }
 
