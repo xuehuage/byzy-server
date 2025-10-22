@@ -85,20 +85,21 @@ class StudentUniformModel {
     static async findByStudentIdWithPrice(studentId: number): Promise<StudentOrder[]> {
         const sql = `
             SELECT 
-            suo.id,
-            suo.student_id,
-            suo.school_uniform_id as uniform_id,  -- 字段映射
-            suo.size,
-            suo.quantity,
-            suo.total_amount as total_price,  -- 直接使用表中总金额字段
-            suo.payment_status,
-            suo.created_at,
-            suo.updated_at,
-            su_config.name as uniform_name,
-            su_config.price as unit_price
-            FROM student_uniform_orders suo  -- 表名修正，别名 suo
-            JOIN school_uniforms su_config ON suo.school_uniform_id = su_config.id  -- 关联字段修正为 school_uniform_id
-            WHERE suo.student_id = ?
+      suo.student_id, 
+      suo.size, 
+      suo.quantity, 
+      suo.total_amount, 
+      suo.order_type, 
+      suo.payment_time, 
+      suo.payment_status,
+      suo.created_at, 
+      suo.updated_at, 
+      su.uniform_type, 
+      su.gender_type, 
+      su.price
+    FROM student_uniform_orders suo
+    JOIN school_uniforms su ON suo.school_uniform_id = su.id
+    WHERE suo.student_id = ?
         `;
         return executeQuery(sql, [studentId]);
     }

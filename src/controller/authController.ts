@@ -9,7 +9,7 @@ import { UserRole, UserWithoutPassword } from '../types';
 const validate = (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    sendError(res, 'Validation failed', 400, errors.array());
+    sendError(res, 'Validation failed');
     return false;
   }
   return true;
@@ -95,7 +95,7 @@ const authController = {
       if (!validate(req, res)) return;
       const { username, password } = req.body;
       const result = await authService.login(username, password);
-      sendSuccess(res, result, '登录成功', 200);
+      sendSuccess(res, result, '登录成功');
     } catch (error) {
       console.error('登录错误:', error);
       // 根据错误类型返回对应状态码
@@ -162,7 +162,7 @@ const authController = {
       }
 
       const newUser = await authService.register(userData);
-      sendSuccess(res, { user: newUser }, 'User registered successfully', 201);
+      sendSuccess(res, { user: newUser }, 'User registered successfully');
     } catch (error) {
       console.error('Error in authController.register:', error);
       sendError(res, (error as Error).message || 'Failed to register user');

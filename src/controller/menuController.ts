@@ -26,8 +26,7 @@ export const getUserMenus = async (req: Request, res: Response) => {
         return sendSuccess(
             res,
             accessibleMenus,
-            '获取菜单权限成功',
-            200
+            '获取菜单权限成功'
         );
     } catch (error) {
         logger.error('获取用户菜单失败:', error);

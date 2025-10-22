@@ -6,19 +6,21 @@ export const sendSuccess = <T = any>(
   res: Response,
   data: T = {} as T,
   message: string = '操作成功',
-  code: number = 200
 ): void => {
-  const response: ApiResponse<T> = { code, data, message };
-  res.status(code).json(response);
+  const response: ApiResponse<T> = { code: 200, data, message };
+  res.status(200).json(response);
 };
 
-// 错误响应
+// 错误响应：HTTP 200 + 自定义业务码（code）
 export const sendError = (
   res: Response,
-  message: string = '服务器内部错误',
-  code: number = 500,
-  data: any = null
-): void => {
-  const response: ApiResponse = { code, data, message };
-  res.status(code).json(response);
+  message: string = '操作失败',
+  httpStatus: number = 200, // 固定 HTTP 200
+  code: number = 500 // 业务错误码（默认500，可自定义）
+) => {
+  res.status(httpStatus).json({
+    code, // 业务错误码（如404表示未找到）
+    data: null,
+    message
+  });
 };

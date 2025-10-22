@@ -1,5 +1,5 @@
 import { executeQuery } from '../config/database';
-import { Student, StudentDetail, Gender } from '../types/student.types';
+import { Student, Gender } from '../types/student.types';
 import { RowDataPacket } from 'mysql2';
 
 class StudentModel {
@@ -8,7 +8,7 @@ class StudentModel {
  * 通过身份证号查询学生详情
  * @param idCard 身份证号
  * @returns 学生详情 */
-    static async findByidCard(idCard: string): Promise<StudentDetail | null> {
+    static async findByidCard(idCard: string): Promise<Student | null> {
         const sql = `
     SELECT 
       s.*,
@@ -30,19 +30,7 @@ class StudentModel {
         if (rows.length === 0) return null;
 
         const student = rows[0];
-        return {
-            ...student,
-            class: {
-                id: student.class_id,
-                name: student.class_name,
-                class_order: 0,
-                grade_id: 0,
-                created_at: new Date(),
-                updated_at: new Date()
-            },
-            grade_name: student.grade_name,
-            school_name: student.school_name
-        };
+        return student;
     }
     /**
      * 创建单个学生
@@ -53,7 +41,7 @@ class StudentModel {
         const sql = `
       INSERT INTO students (
         name, id_card, student_id, class_id, gender, 
-        uniform_size, payment_status, created_at, updated_at
+        uniform_size, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `;
         const result = await executeQuery<{ insertId: number }>(sql, [
@@ -63,7 +51,6 @@ class StudentModel {
             data.class_id,
             data.gender,
             data.uniform_size,
-            data.payment_status
         ]);
 
         return {
@@ -85,7 +72,7 @@ class StudentModel {
         const sql = `
       INSERT INTO students (
         name, id_card, student_id, class_id, gender, 
-        uniform_size, payment_status, created_at, updated_at
+        uniform_size,  created_at, updated_at
       ) VALUES ${students.map(() => '(?, ?, ?, ?, ?, ?, ?, NOW(), NOW())').join(',')}
     `;
         const params = students.flatMap(student => [
@@ -95,7 +82,6 @@ class StudentModel {
             student.class_id,
             student.gender,
             student.uniform_size,
-            student.payment_status
         ]);
         await executeQuery(sql, params);
     }
@@ -119,7 +105,7 @@ class StudentModel {
      * @param studentId 学生ID
      * @returns 学生详情
      */
-    static async findDetailById(studentId: number): Promise<StudentDetail | null> {
+    static async findDetailById(studentId: number): Promise<Student | null> {
         const sql = `
       SELECT 
         s.*,
@@ -141,20 +127,7 @@ class StudentModel {
         if (rows.length === 0) return null;
 
         const student = rows[0];
-        return {
-            ...student,
-            class: {
-                id: student.class_id,
-                name: student.class_name,
-                // 其他班级字段从数据库查询补充
-                class_order: 0, // 实际场景需从classes表查询
-                grade_id: 0, // 实际场景需从classes表查询
-                created_at: new Date(),
-                updated_at: new Date()
-            },
-            grade_name: student.grade_name,
-            school_name: student.school_name
-        };
+        return student
     }
 
     /**
@@ -236,6 +209,48 @@ class StudentModel {
             classId
         ]);
         return rows[0] as any;
+    }
+
+    /**
+     * 查询全校/年级/班级学生详情
+     * @param schoolId 学校ID
+     * @param gradeId 年级ID
+     * @param classId 班级ID
+     * @returns 统计结果
+     */
+    static async findStudentsByCascade(schoolId: number, gradeId?: number, classId?: number) {
+        // 构建动态SQL，根据参数组合拼接WHERE条件
+        let whereClause = 'g.school_id = ?';
+        const params: number[] = [schoolId];
+
+        if (gradeId) {
+            whereClause += ' AND c.grade_id = ?';
+            params.push(gradeId);
+        }
+        if (classId) {
+            whereClause += ' AND s.class_id = ?';
+            params.push(classId);
+        }
+
+        // 核心SQL：关联多表查询目标字段
+        const sql = `
+        SELECT 
+        s.name AS student_name,
+        s.id_card,
+        g.name AS grade_name,  -- 年级名称（需从grades表获取）
+        su.uniform_type AS uniform_category,  -- 校服种类（1-3对应夏装/春秋装/冬装）
+        suo.quantity AS uniform_count,        -- 购买套数
+        suo.payment_status                    -- 付款状态（0=未付款，1=已付款）
+        FROM students s
+        JOIN classes c ON s.class_id = c.id
+        JOIN grades g ON c.grade_id = g.id
+        LEFT JOIN student_uniform_orders suo ON s.id = suo.student_id  -- 左连接：包含未购买校服的学生
+        LEFT JOIN school_uniforms su ON suo.school_uniform_id = su.id
+        WHERE ${whereClause}
+        ORDER BY g.name, c.name, s.name  -- 按年级、班级、姓名排序
+    `;
+
+        return executeQuery(sql, params);
     }
 }
 

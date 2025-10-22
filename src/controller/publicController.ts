@@ -27,22 +27,16 @@ export const getPublicSchoolDetail = async (req: Request, res: Response) => {
  * 获取公开的学校详情（不含敏感信息）
  */
 export const getPublicStudent = async (req: Request, res: Response) => {
-    console.log('触发query-by-idcard路由');
-
     try {
         const { id_card } = req.params;
-
-        if (!id_card || typeof id_card !== 'string') {
-            return sendError(res, '请提供有效的身份证号', 400);
-        }
-
         const result = await getStudentByidCard(id_card);
+
         if (result) {
-            sendSuccess(res, result);
+            sendSuccess(res, result, '学生信息获取成功');
         } else {
-            sendError(res, '未找到该学生信息', 404);
+            sendError(res, '未找到该学生信息', 200, 404);
         }
     } catch (error) {
-        sendError(res, (error as Error).message);
+        sendError(res, '获取学生信息失败', 200, 500);
     }
 };

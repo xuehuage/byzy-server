@@ -20,9 +20,3 @@ export interface Student extends Timestamps {
     payment_status: string; // 整体付款状态（预留）
 }
 
-// 学生详情接口（含关联信息）
-export interface StudentDetail extends Student {
-    class: Class; // 关联班级信息
-    grade_name: string; // 年级名称
-    school_name: string; // 学校名称
-}

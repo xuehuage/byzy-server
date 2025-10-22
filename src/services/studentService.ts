@@ -1,7 +1,7 @@
 import StudentModel from '../models/StudentModel';
 import StudentUniformModel from '../models/StudentUniformModel';
 import { StudentByIdCardResult } from '../types/studentQuery.types';
-import { Student, StudentDetail } from '../types/student.types';
+import { Student } from '../types/student.types';
 
 /**
  * 创建学生
@@ -20,7 +20,6 @@ export const createStudent = async (studentData: Omit<Student, 'id' | 'created_a
 export const getStudentByidCard = async (idCard: string): Promise<StudentByIdCardResult | null> => {
     // 1. 查询学生基本信息
     const student = await StudentModel.findByidCard(idCard);
-    console.log("学生信息:", student)
     if (!student) return null;
 
     // 2. 查询学生订单信息（含金额计算）
@@ -45,7 +44,7 @@ export const bulkCreateStudents = async (students: Omit<Student, 'id' | 'created
  * @param studentId 学生ID
  * @returns 学生详情
  */
-export const getStudentDetail = async (studentId: number): Promise<StudentDetail | null> => {
+export const getStudentDetail = async (studentId: number): Promise<Student | null> => {
     return await StudentModel.findDetailById(studentId);
 };
 
@@ -74,4 +73,19 @@ export const countStudentsByGrade = async (gradeId: number) => {
  */
 export const countStudentsByClass = async (classId: number) => {
     return await StudentModel.countByClass(classId);
+};
+
+/**
+ * 查询全校/年级/班级
+ * @returns 统计结果
+ */
+export const getStudentsByCascade = async (schoolId: number, gradeId?: number, classId?: number) => {
+    // 校验参数合法性：若传classId必须传gradeId，传gradeId必须传schoolId
+    if (classId && !gradeId) {
+        throw new Error('查询班级学生需同时传入年级ID');
+    }
+    if (gradeId && !schoolId) {
+        throw new Error('查询年级学生需同时传入学校ID');
+    }
+    return await StudentModel.findStudentsByCascade(schoolId, gradeId, classId);
 };

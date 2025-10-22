@@ -14,7 +14,7 @@ export const validateRequest = (req: Request, res: Response, next: NextFunction)
     return;
   }
   if (!errors.isEmpty()) {
-    sendError(res, '字段验证错误', 400, errors.array());
+    sendError(res, '字段验证错误');
     return;
   }
   next();

@@ -27,7 +27,7 @@ const manufacturerController = {
 
       const manufacturerData = req.body;
       const newManufacturer = await manufacturerService.createManufacturer(manufacturerData);
-      sendSuccess(res, { manufacturer: newManufacturer }, '创建成功', 200);
+      sendSuccess(res, { manufacturer: newManufacturer }, '创建成功');
     } catch (error) {
       console.error('创建失败:', error);
       sendError(res, (error as Error).message || 'Failed to create manufacturer');

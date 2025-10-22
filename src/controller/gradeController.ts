@@ -14,7 +14,7 @@ export default {
         return sendError(res, '未登录', 403);
       }
       const newGrade = await gradeService.createGrade(gradeData, req.user);
-      return sendSuccess(res, newGrade, 'Grade created successfully', 201);
+      return sendSuccess(res, newGrade, 'Grade created successfully');
     } catch (error) {
       console.error('Create grade error:', error);
       return sendError(res, (error as Error).message, 400);

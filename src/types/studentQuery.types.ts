@@ -1,5 +1,6 @@
 import { PaymentStatus } from './database.types';
-import { StudentDetail } from './student.types';
+import { Student } from './student.types';
+
 import { StudentUniform } from './studentUniform.types';
 
 export interface StudentOrder extends StudentUniform {
@@ -12,6 +13,6 @@ export interface StudentOrder extends StudentUniform {
 
 // 身份证查询结果
 export interface StudentByIdCardResult {
-    student: StudentDetail;
+    student: Student;
     orders: StudentOrder[];
 }

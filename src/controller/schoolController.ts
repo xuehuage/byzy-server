@@ -32,7 +32,7 @@ export const schoolController = {
         ...schoolData,
         manufacturer_id: manufacturerId
       });
-      return sendSuccess(res, school, '学校创建成功', 200);
+      return sendSuccess(res, school, '学校创建成功');
     } catch (error) {
       console.error('创建学校失败:', error);
       return sendError(res, `创建学校失败: ${(error as Error).message}`, 500);
@@ -57,7 +57,7 @@ export const schoolController = {
       return sendSuccess(res, {
         count: schools.length,
         schools
-      }, '学校列表获取成功', 200);
+      }, '学校列表获取成功');
     } catch (error) {
       console.error('获取学校列表失败:', error);
       return sendError(res, '获取学校列表失败', 500);
@@ -78,7 +78,7 @@ export const schoolController = {
         return sendError(res, '学校不存在或不属于当前厂商', 404);
       }
 
-      return sendSuccess(res, school, '学校详情获取成功', 200);
+      return sendSuccess(res, school, '学校详情获取成功');
     } catch (error) {
       console.error('获取学校详情失败:', error);
       return sendError(res, '获取学校详情失败', 500);
@@ -102,7 +102,7 @@ export const schoolController = {
         return sendError(res, '更新学校失败:学校不存在或不属于当前厂商', 404);
       }
 
-      return sendSuccess(res, updatedSchool, '学校更新成功', 200);
+      return sendSuccess(res, updatedSchool, '学校更新成功');
     } catch (error) {
       console.error('更新学校失败:', error);
       return sendError(res, `更新学校失败: ${(error as Error).message}`, 500);
