@@ -30,9 +30,8 @@ export enum UserRole {
 
 // 学生支付状态枚举
 export enum PaymentStatus {
-  PAID = 'paid',
-  UNPAID = 'unpaid',
-  PENDING = 'pending'
+  PAID = 1,
+  UNPAID = 0,
 }
 
 // 厂商 (Manufacturers)

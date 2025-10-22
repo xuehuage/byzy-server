@@ -13,7 +13,7 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-router.get('/cascade', authenticate, getStudentsByCascadeController);
+router.get('/list', authenticate, getStudentsByCascadeController);
 
 // // 创建学生
 // router.post('/', async (req, res) => {

@@ -1,7 +1,7 @@
 import StudentModel from '../models/StudentModel';
 import StudentUniformModel from '../models/StudentUniformModel';
 import { StudentByIdCardResult } from '../types/studentQuery.types';
-import { Student } from '../types/student.types';
+import { Student, StudentQueryParams } from '../types/student.types';
 
 /**
  * 创建学生
@@ -79,13 +79,56 @@ export const countStudentsByClass = async (classId: number) => {
  * 查询全校/年级/班级
  * @returns 统计结果
  */
-export const getStudentsByCascade = async (schoolId: number, gradeId?: number, classId?: number) => {
-    // 校验参数合法性：若传classId必须传gradeId，传gradeId必须传schoolId
-    if (classId && !gradeId) {
-        throw new Error('查询班级学生需同时传入年级ID');
+export const getStudentsByCascade = async (params: StudentQueryParams) => {
+    const { schoolId, gradeId, classId, uniformType, paymentStatus, page, pageSize } = params;
+
+    // 1. 业务规则校验（级联条件必须至少有一个）
+    if (!schoolId && !gradeId && !classId) {
+        throw new Error('至少需要提供schoolId、gradeId或classId中的一个');
     }
-    if (gradeId && !schoolId) {
-        throw new Error('查询年级学生需同时传入学校ID');
+
+    // 2. 构建查询条件（级联优先级：classId > gradeId > schoolId）
+    const whereParts: string[] = [];
+    const queryParams: any[] = [];
+
+    if (classId) {
+        whereParts.push('s.class_id = ?');
+        queryParams.push(classId);
+    } else if (gradeId) {
+        whereParts.push('c.grade_id = ?');
+        queryParams.push(gradeId);
+    } else if (schoolId) {
+        whereParts.push('g.school_id = ?');
+        queryParams.push(schoolId);
     }
-    return await StudentModel.findStudentsByCascade(schoolId, gradeId, classId);
+
+    // 3. 筛选条件：校服类型
+    if (uniformType) {
+        whereParts.push('su_config.uniform_type = ?');
+        queryParams.push(uniformType);
+    }
+
+    // 4. 筛选条件：支付状态
+    if (paymentStatus !== undefined) {
+        whereParts.push('suo.payment_status = ?');
+        queryParams.push(paymentStatus);
+    }
+
+    // 5. 组装WHERE子句
+    const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    // 6. 分页参数处理
+    const limit = pageSize || 10;
+    const offset = ((page || 1) - 1) * limit;
+
+    // 7. 调用Model层执行查询
+    const { list, total } = await StudentModel.queryByCascade(whereClause, queryParams, limit, offset);
+
+
+
+    return {
+        list,
+        total
+
+    };
 };

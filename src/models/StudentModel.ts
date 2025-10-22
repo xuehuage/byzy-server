@@ -2,6 +2,11 @@ import { executeQuery } from '../config/database';
 import { Student, Gender } from '../types/student.types';
 import { RowDataPacket } from 'mysql2';
 
+// 定义计数查询结果的类型（局部使用，不影响全局）
+interface CountResult {
+    total: number;
+}
+
 class StudentModel {
 
     /**
@@ -211,46 +216,133 @@ class StudentModel {
         return rows[0] as any;
     }
 
+
     /**
-     * 查询全校/年级/班级学生详情
-     * @param schoolId 学校ID
-     * @param gradeId 年级ID
-     * @param classId 班级ID
-     * @returns 统计结果
-     */
-    static async findStudentsByCascade(schoolId: number, gradeId?: number, classId?: number) {
-        // 构建动态SQL，根据参数组合拼接WHERE条件
-        let whereClause = 'g.school_id = ?';
-        const params: number[] = [schoolId];
-
-        if (gradeId) {
-            whereClause += ' AND c.grade_id = ?';
-            params.push(gradeId);
+   * 查询全校/年级/班级学生详情执行级联查询（仅处理数据访问，返回原始结果）
+   * @param whereClause SQL条件子句
+   * @param queryParams 条件参数
+   * @param limit 分页条数
+   * @param offset 分页偏移量
+   * @returns 原始查询结果（学生列表+总数）
+   */
+    static async queryByCascade(whereClause: string,
+        queryParams: any[],
+        limit: number,
+        offset: number) {
+        // --------------------------
+        // 1. 校验参数数量（关键：避免占位符与参数不匹配）
+        // --------------------------
+        // 统计whereClause中的占位符数量
+        const placeholderCount = (whereClause.match(/\?/g) || []).length;
+        // 校验：where条件的占位符数量必须与queryParams长度一致
+        if (placeholderCount !== queryParams.length) {
+            throw new Error(`参数数量不匹配：WHERE子句有${placeholderCount}个占位符，但收到${queryParams.length}个参数`);
         }
-        if (classId) {
-            whereClause += ' AND s.class_id = ?';
-            params.push(classId);
-        }
 
-        // 核心SQL：关联多表查询目标字段
-        const sql = `
-        SELECT 
-        s.name AS student_name,
-        s.id_card,
-        g.name AS grade_name,  -- 年级名称（需从grades表获取）
-        su.uniform_type AS uniform_category,  -- 校服种类（1-3对应夏装/春秋装/冬装）
-        suo.quantity AS uniform_count,        -- 购买套数
-        suo.payment_status                    -- 付款状态（0=未付款，1=已付款）
-        FROM students s
-        JOIN classes c ON s.class_id = c.id
-        JOIN grades g ON c.grade_id = g.id
-        LEFT JOIN student_uniform_orders suo ON s.id = suo.student_id  -- 左连接：包含未购买校服的学生
-        LEFT JOIN school_uniforms su ON suo.school_uniform_id = su.id
-        WHERE ${whereClause}
-        ORDER BY g.name, c.name, s.name  -- 按年级、班级、姓名排序
+        // --------------------------
+        // 2. 基础查询字段（与表结构严格对应）
+        // --------------------------
+        const baseFields = `
+      -- 学生表字段
+      s.id AS student_id,
+      s.name AS student_name,
+      s.class_id,
+      s.gender,
+      s.id_card,
+      s.student_id AS student_no,
+      s.source,
+      s.created_at AS student_created_at,
+      s.updated_at AS student_updated_at,
+      
+      -- 班级表字段
+      c.name AS class_name,
+      
+      -- 年级表字段
+      g.name AS grade_name,
+      g.id AS grade_id,
+      
+      -- 学校表字段
+      sch.id AS school_id,
+      sch.name AS school_name,
+      sch.type AS school_type,
+      
+      -- 学生订单表字段
+      suo.payment_status,
+      suo.payment_time,
+      suo.total_amount,
+      
+      -- 校服表字段
+      su_config.uniform_type,
+      su_config.gender_type AS uniform_gender_type,
+      su_config.price AS uniform_price
     `;
 
-        return executeQuery(sql, params);
+        // --------------------------
+        // 3. 关联表SQL
+        // --------------------------
+        const joinTables = `
+      FROM students s
+      JOIN classes c ON s.class_id = c.id
+      JOIN grades g ON c.grade_id = g.id
+      JOIN schools sch ON g.school_id = sch.id
+      LEFT JOIN student_uniform_orders suo ON s.id = suo.student_id
+      LEFT JOIN school_uniforms su_config ON suo.school_uniform_id = su_config.id
+    `;
+
+        // --------------------------
+        // 4. 数据查询SQL（带分页）
+        // --------------------------
+        const dataSql = `
+      SELECT DISTINCT s.id, ${baseFields}
+      ${joinTables}
+      ${whereClause}
+      ORDER BY s.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+        // dataSql的占位符总数 = where条件的占位符 + 2（limit和offset）
+        const dataPlaceholderTotal = placeholderCount + 2;
+        const dataParams = [...queryParams, limit, offset];
+        // 校验dataSql的参数数量
+        if (dataParams.length !== dataPlaceholderTotal) {
+            throw new Error(`数据查询参数不匹配：SQL有${dataPlaceholderTotal}个占位符，但收到${dataParams.length}个参数`);
+        }
+
+        // --------------------------
+        // 5. 总数查询SQL
+        // --------------------------
+        const countSql = `
+      SELECT COUNT(DISTINCT s.id) AS total
+      ${joinTables}
+      ${whereClause}
+    `;
+        // countSql的占位符数量 = where条件的占位符（无分页参数）
+        if (queryParams.length !== placeholderCount) {
+            throw new Error(`总数查询参数不匹配：SQL有${placeholderCount}个占位符，但收到${queryParams.length}个参数`);
+        }
+
+        // --------------------------
+        // 6. 执行查询（添加调试日志）
+        // --------------------------
+        try {
+            console.log('数据查询SQL:', dataSql);
+            console.log('数据查询参数:', dataParams);
+            console.log('总数查询SQL:', countSql);
+            console.log('总数查询参数:', queryParams);
+
+            const [students, countResult] = await Promise.all([
+                executeQuery(dataSql, dataParams),
+                executeQuery(countSql, queryParams) as Promise<CountResult[]>
+            ]);
+
+            return {
+                list: students,
+                total: countResult[0]?.total || 0
+            };
+        } catch (error) {
+            console.error('数据库查询失败:', error);
+            // 抛出详细错误信息，方便调试
+            throw new Error(`数据库查询失败：${(error as Error).message}（SQL参数不匹配可能是原因）`);
+        }
     }
 }
 

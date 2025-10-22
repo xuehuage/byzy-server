@@ -7,6 +7,7 @@ import gradeRoutes from './grades';
 import classRoutes from './classes';
 import menusRoutes from './menus';
 import publicRoutes from './public';
+import studentRoutes from './studentRoutes';
 
 
 
@@ -21,6 +22,7 @@ router.use('/manufacturer', manufacturerRoutes); // 厂商相关路由：/api/ma
 router.use('/schools', schoolRoutes);
 router.use('/grades', gradeRoutes);
 router.use('/menus', menusRoutes);
+router.use('/students', studentRoutes);
 router.use('/', classRoutes); // 与年级路由合并
 
 export default router;

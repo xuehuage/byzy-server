@@ -1,6 +1,5 @@
 // 学生校服购买记录类型定义
-import { Timestamps } from './database.types';
-import { PaymentStatus } from './database.types';
+import { PaymentStatus, Timestamps } from './database.types';
 import { UniformType } from './school.types';
 
 // 学生校服购买记录（与数据库表字段匹配）
