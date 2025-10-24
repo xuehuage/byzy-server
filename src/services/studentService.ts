@@ -54,7 +54,7 @@ export const getStudentDetail = async (studentId: number): Promise<Student | nul
  * @returns 统计结果
  */
 export const countStudentsBySchool = async (schoolId: number) => {
-    return await StudentModel.countBySchool(schoolId);
+    // return await StudentModel.countBySchool(schoolId);
 };
 
 /**
@@ -80,55 +80,59 @@ export const countStudentsByClass = async (classId: number) => {
  * @returns 统计结果
  */
 export const getStudentsByCascade = async (params: StudentQueryParams) => {
-    const { schoolId, gradeId, classId, uniformType, paymentStatus, page, pageSize } = params;
-
-    // 1. 业务规则校验（级联条件必须至少有一个）
-    if (!schoolId && !gradeId && !classId) {
-        throw new Error('至少需要提供schoolId、gradeId或classId中的一个');
-    }
-
-    // 2. 构建查询条件（级联优先级：classId > gradeId > schoolId）
+    // 1. 初始化条件和参数（严格一一对应）
     const whereParts: string[] = [];
     const queryParams: any[] = [];
 
-    if (classId) {
-        whereParts.push('s.class_id = ?');
-        queryParams.push(classId);
-    } else if (gradeId) {
+    if (params.schoolId !== undefined) {
+        whereParts.push('g.school_id = ?'); // 正确：用?占位
+        queryParams.push(params.schoolId); // 参数单独存储，不直接拼入SQL
+    } else if (params.gradeId !== undefined) {
         whereParts.push('c.grade_id = ?');
-        queryParams.push(gradeId);
-    } else if (schoolId) {
-        whereParts.push('g.school_id = ?');
-        queryParams.push(schoolId);
+        queryParams.push(params.gradeId);
+    } else if (params.classId !== undefined) {
+        whereParts.push('s.class_id = ?');
+        queryParams.push(params.classId);
+    } else {
+        throw new Error('至少需要提供schoolId、gradeId或classId中的一个');
     }
 
-    // 3. 筛选条件：校服类型
-    if (uniformType) {
-        whereParts.push('su_config.uniform_type = ?');
-        queryParams.push(uniformType);
+    // 其他筛选条件同理，均使用?占位
+    if (params.uniformType !== undefined) {
+        whereParts.push('su.uniform_type = ?');
+        queryParams.push(params.uniformType);
     }
-
-    // 4. 筛选条件：支付状态
-    if (paymentStatus !== undefined) {
+    if (params.paymentStatus !== undefined) {
         whereParts.push('suo.payment_status = ?');
-        queryParams.push(paymentStatus);
+        queryParams.push(params.paymentStatus);
     }
 
-    // 5. 组装WHERE子句
+    // 生成whereClause（带?占位符）
     const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
 
-    // 6. 分页参数处理
-    const limit = pageSize || 10;
-    const offset = ((page || 1) - 1) * limit;
+    // 打印Service层生成的条件和参数（关键调试）
+    console.log('===== Service层调试 =====');
+    console.log('whereClause（带占位符）:', whereClause); // 应输出 "WHERE g.school_id = ?"
+    console.log('queryParams:', queryParams); // 应输出 [1]
 
-    // 7. 调用Model层执行查询
-    const { list, total } = await StudentModel.queryByCascade(whereClause, queryParams, limit, offset);
+    // 强制转换并校验分页参数（关键修复）
+    const limit = Math.max(1, Math.min(100, Number(params.pageSize)));
+    const offset = Math.max(0, (Number(params.page) - 1) * limit);
 
+    // 新增：校验参数有效性，排除NaN
+    if (isNaN(limit) || isNaN(offset)) {
+        throw new Error(`分页参数无效：page=${params.page}, pageSize=${params.pageSize}`);
+    }
+    if (queryParams.some(param => param === undefined || param === null || isNaN(param))) {
+        throw new Error(`查询参数包含无效值：${JSON.stringify(queryParams)}`);
+    }
 
+    // 打印参数类型（新增调试）
+    console.log('===== 参数类型调试 =====');
+    console.log('queryParams类型:', queryParams.map(p => typeof p)); // 应全为'number'
+    console.log('limit类型:', typeof limit, '值:', limit); // 应为'number'
+    console.log('offset类型:', typeof offset, '值:', offset); // 应为'number'
 
-    return {
-        list,
-        total
-
-    };
+    // 调用Model层
+    return await StudentModel.queryByCascade(whereClause, queryParams, limit, offset);
 };

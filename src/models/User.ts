@@ -1,10 +1,10 @@
 // src/models/User.ts
-import { RowDataPacket, ResultSetHeader, OkPacket } from 'mysql2';
-import { executeQuery } from '../config/database';
+import { executeQuery, executeWrite, QueryResult, WriteResult } from '../config/database';
 import { User, Status, UserRole, UserWithoutPassword } from '../types';
 import bcrypt from 'bcryptjs';
 
-interface UserRow extends User, RowDataPacket { }
+
+interface UserRow extends User { }
 
 // 保留完整User的映射（用于确实需要password的场景）
 const mapRowToUser = (row: UserRow): User => {
@@ -14,7 +14,7 @@ const mapRowToUser = (row: UserRow): User => {
   return {
     id: row.id,
     username: row.username,
-    password: row.password, // 明确要求必须有password
+    password: row.password,
     realname: row.realname,
     phone: row.phone,
     email: row.email,
@@ -28,7 +28,6 @@ const mapRowToUser = (row: UserRow): User => {
   };
 };
 
-// 新增：直接映射为UserWithoutPassword（不经过User类型）
 export const mapRowToUserWithoutPassword = (row: UserRow): UserWithoutPassword => {
   return {
     id: row.id,
@@ -43,7 +42,6 @@ export const mapRowToUserWithoutPassword = (row: UserRow): UserWithoutPassword =
     created_at: row.created_at,
     updated_at: row.updated_at,
     last_login_at: row.last_login_at,
-    // 不包含password，直接满足UserWithoutPassword类型
   };
 };
 
@@ -77,8 +75,8 @@ const UserModel = {
     ];
 
     try {
-      const [result] = await executeQuery<[ResultSetHeader]>(query, params);
-      const insertId = result.insertId;
+      const result: WriteResult = await executeWrite(query, params);
+      const insertId = result.insertId as number;
 
       // 查询新创建的用户（不含密码）
       const newUser = await this.findById(insertId);
@@ -124,8 +122,10 @@ const UserModel = {
     `;
 
     try {
-      const rows = await executeQuery<UserRow[]>(query, [username]);
-      return rows.length > 0 ? rows[0] : null;
+
+      const rows = await executeQuery<UserRow>(query, [username]);
+      if (rows.length === 0) return null;
+      return rows[0];
     } catch (error) {
       console.error('Error finding user by username:', error);
       throw new Error('Failed to find user');
@@ -145,8 +145,8 @@ const UserModel = {
     `;
 
     try {
-      const rows = await executeQuery<UserRow[]>(query, [manufacturerId]);
-      return rows;
+      const rows: QueryResult<UserRow> = await executeQuery<UserRow>(query, [manufacturerId]);
+      return rows.map(mapRowToUser);
     } catch (error) {
       console.error('Error finding users by manufacturer:', error);
       throw new Error('Failed to find associated users');
@@ -184,7 +184,7 @@ const UserModel = {
     `;
 
     try {
-      await executeQuery<OkPacket>(query, params);
+      await executeWrite(query, params);
       return this.findById(id); // 返回更新后的用户信息
     } catch (error) {
       console.error('Error updating user:', error);
@@ -199,8 +199,8 @@ const UserModel = {
     const query = 'DELETE FROM users WHERE id = ?';
 
     try {
-      const [result] = await executeQuery<[OkPacket]>(query, [id]);
-      return result.affectedRows === 1; // 受影响行数为1表示删除成功
+      const result: WriteResult = await executeWrite(query, [id]);
+      return result.affectedRows === 1;
     } catch (error) {
       console.error('Error deleting user:', error);
       throw new Error('Failed to delete user');
@@ -214,7 +214,7 @@ const UserModel = {
     const query = 'UPDATE users SET last_login_at = NOW() WHERE id = ?';
 
     try {
-      await executeQuery<OkPacket>(query, [id]);
+      await executeWrite(query, [id]);
     } catch (error) {
       console.error('Error updating last login:', error);
       // 登录成功但更新时间失败，不阻断主流程，仅日志记录
@@ -250,8 +250,8 @@ const UserModel = {
         LIMIT 1
       `;
 
-      const [rows] = await executeQuery<RowDataPacket[]>(query, [role]);
-      return rows.role_id;
+      const result: QueryResult<{ role_id: number }> = await executeQuery(query, [role]);
+      return result.length > 0 ? result[0].role_id : null;
     } catch (error) {
       console.error('Error getting role ID by role name:', error);
       throw new Error('Failed to get role ID');

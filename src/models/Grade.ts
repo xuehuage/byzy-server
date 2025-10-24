@@ -1,4 +1,4 @@
-import { executeQuery, executeTransaction } from '../config/database';
+import { executeTransaction, executeWrite, WriteResult, QueryResult, executeQuery } from '../config/database';
 import { Grade, CreateGradeDto, UpdateGradeDto, Class } from '../types/gradeClass.types';
 import ClassModel from './Class'; // 关联班级模型，用于级联操作
 
@@ -50,13 +50,13 @@ class GradeModel {
       VALUES ${grades.map(() => '(?,  ?, NOW(), NOW())').join(',')}
     `;
     const gradeParams = grades.flatMap(grade => [grade.name, grade.school_id]);
-    const gradeResult = await executeQuery<{ insertId: number, affectedRows: number }>(gradeSql, gradeParams);
+    const gradeResult: WriteResult = await executeWrite(gradeSql, gradeParams);
 
     // 批量创建班级（如果有）：通过自增ID计算每个年级对应的班级
     const classBatch: Omit<Class, 'id' | 'created_at' | 'updated_at'>[] = [];
     grades.forEach((grade, index) => {
       if (grade.classes && grade.classes.length > 0) {
-        const currentGradeId = gradeResult.insertId + index; // 自增ID连续，可推导
+        const currentGradeId = gradeResult.insertId as number + index;
         classBatch.push(
           ...grade.classes.map(cls => ({ ...cls, grade_id: currentGradeId }))
         );
@@ -79,7 +79,7 @@ class GradeModel {
     WHERE school_id = ?
     ORDER BY id ASC
   `;
-    const grades = await executeQuery<Grade[]>(sql, [schoolId]);
+    const grades = await executeQuery<Grade>(sql, [schoolId]);
 
     // 为每个年级查询班级
     return Promise.all(grades.map(async (grade) => ({
@@ -98,7 +98,7 @@ class GradeModel {
       FROM grades
       WHERE id = ?
     `;
-    const rows = await executeQuery<Grade[]>(sql, [gradeId]);
+    const rows = await executeQuery<Grade>(sql, [gradeId]);
     if (rows.length === 0) return null;
 
     const grade = rows[0];
@@ -130,7 +130,7 @@ class GradeModel {
         WHERE id = ?
       `;
       const params = [...Object.values(gradeFields).filter(val => val !== undefined), gradeId];
-      await executeQuery(sql, params);
+      await executeWrite(sql, params);
     }
 
     // 2. 更新班级（新增/修改/删除）
@@ -169,7 +169,7 @@ class GradeModel {
     }
     // 3. 最后删除年级
     const sql = 'DELETE FROM grades WHERE school_id = ?';
-    await executeQuery(sql, [schoolId]);
+    await executeWrite(sql, [schoolId]);
   }
 
   /**
@@ -181,7 +181,7 @@ class GradeModel {
     await ClassModel.deleteByGradeId(gradeId);
     // 2. 再删除年级
     const sql = 'DELETE FROM grades WHERE id = ?';
-    const result = await executeQuery<{ affectedRows: number }>(sql, [gradeId]);
+    const result: WriteResult = await executeWrite(sql, [gradeId]);
     return result.affectedRows > 0;
   }
 

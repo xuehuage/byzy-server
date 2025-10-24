@@ -1,6 +1,7 @@
 // 学生相关类型定义
 import { PaymentStatus, Timestamps } from './database.types';
 import { Class } from './gradeClass.types';
+import { UniformType } from './school.types';
 
 // 性别枚举
 export enum Gender {
@@ -47,3 +48,114 @@ export interface StudentQueryParams {
     pageSize?: number;
 }
 
+
+/** 原始查询结果中的单条记录（包含学生+订单+校服信息） */
+export interface StudentRawRecord {
+    // 学生基础信息
+    student_id: number;
+    student_name: string;
+    gender: number;
+    student_class_id: number;
+    student_no: string;
+    id_card: string;
+    source: number;
+    student_created_at: string;
+    student_updated_at: string;
+
+    // 班级信息
+    class_id: number;
+    class_name: string;
+    class_order: number;
+    class_grade_id: number;
+    class_school_id: number | null;
+
+    // 年级信息
+    grade_id: number;
+    grade_name: string;
+    grade_level: number;
+    grade_school_id: number;
+
+    // 学校信息
+    school_id: number;
+    school_name: string;
+    school_type: number;
+    school_status: number;
+
+    // 订单信息（可能为null，无订单时）
+    order_id?: number;
+    order_type?: number;
+    payment_status?: number;
+    payment_time?: string | null;
+    quantity?: number;
+    size?: string;
+    total_amount?: string;
+    school_uniform_id?: number;
+    order_created_at?: string;
+    order_updated_at?: string;
+
+    // 校服信息（可能为null，无订单时）
+    uniform_id?: number;
+    uniform_type?: UniformType; // 1=夏装，2=春秋装，3=冬装
+    uniform_gender?: string;
+    uniform_price?: string;
+    is_online?: number;
+    uniform_status?: number;
+    uniform_school_id?: number;
+}
+
+/** 合并后的订单信息（包含对应的校服信息） */
+export interface StudentOrder {
+    order_id: number;
+    order_type: number;
+    payment_status: number;
+    payment_time: string | null;
+    quantity: number;
+    size: string;
+    total_amount: string;
+    school_uniform_id: number;
+    order_created_at: string;
+    order_updated_at: string;
+    uniform_id: number;
+    uniform_type: UniformType;
+    uniform_gender: string;
+    uniform_price: string;
+    is_online: number;
+    uniform_status: number;
+    uniform_school_id: number;
+}
+
+/** 合并后的学生信息（含订单数组） */
+export interface MergedStudent {
+    // 学生基础信息
+    student_id: number;
+    student_name: string;
+    gender: number;
+    student_class_id: number;
+    student_no: string;
+    id_card: string;
+    source: number;
+    student_created_at: string;
+    student_updated_at: string;
+
+    // 班级信息
+    class_id: number;
+    class_name: string;
+    class_order: number;
+    class_grade_id: number;
+    class_school_id: number | null;
+
+    // 年级信息
+    grade_id: number;
+    grade_name: string;
+    grade_level: number;
+    grade_school_id: number;
+
+    // 学校信息
+    school_id: number;
+    school_name: string;
+    school_type: number;
+    school_status: number;
+
+    // 订单数组（无订单时为空数组）
+    orders: StudentOrder[];
+}

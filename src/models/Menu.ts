@@ -17,7 +17,6 @@ export const getMenusByRoleId = async (roleId: number): Promise<MenuItem[]> => {
   `;
 
   const [rows] = await pool.execute(query, [roleId]);
-  console.log('rows:', rows)
   return rows as MenuItem[];
 };
 

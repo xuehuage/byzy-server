@@ -23,7 +23,7 @@ class SchoolModel {
       WHERE id = ?
   `;
 
-    const rows = await executeQuery<School[]>(sql, [schoolId]);
+    const rows = await executeQuery<School>(sql, [schoolId]);
     if (rows.length === 0) return null;
 
     const school = rows[0];
@@ -110,7 +110,7 @@ class SchoolModel {
       ORDER BY created_at DESC
     `;
     // 修复：查询结果需要手动初始化 grades 字段
-    const schools = (await executeQuery<Omit<School, 'grades'>[]>(sql, [manufacturerId])).map(school => ({
+    const schools = (await executeQuery<Omit<School, 'grades'>>(sql, [manufacturerId])).map(school => ({
       ...school,
       grades: [] as Grade[] // 初始化空数组
     }));
@@ -163,7 +163,7 @@ class SchoolModel {
       FROM schools
       WHERE id = ?
     `;
-    const rows = await executeQuery<School[]>(sql, [id]);
+    const rows = await executeQuery<School>(sql, [id]);
     if (rows.length === 0) return null;
 
     const school: School = rows[0]
@@ -193,7 +193,7 @@ class SchoolModel {
       }
     }
 
-    const rows = await executeQuery<School[]>(sql, params);
+    const rows = await executeQuery<School>(sql, params);
     if (rows.length === 0) return null;
 
     const school = rows[0];
@@ -347,7 +347,7 @@ class SchoolModel {
     console.log('SQL参数:', queryParams);
 
     // 执行查询并处理结果
-    const schools = await executeQuery<Omit<School, 'grades'>[]>(sql, queryParams)
+    const schools = await executeQuery<Omit<School, 'grades'>>(sql, queryParams)
 
     return schools;
   }

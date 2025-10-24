@@ -1,85 +1,54 @@
-// src/config/database.ts
-import mysql from 'mysql2';
-import { Pool, PoolOptions, PoolConnection, OkPacket, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import mariadb, { Pool, PoolConfig, PoolConnection, UpsertResult } from 'mariadb';
 import dotenv from 'dotenv';
 
-// 加载环境变量
-dotenv.config();
-
-// 定义数据库查询可能的返回类型
-export type MySqlResult =
-  | OkPacket
-  | OkPacket[]
-  | ResultSetHeader
-  | ResultSetHeader[]
-  | RowDataPacket[]
-  | RowDataPacket[][]
-  | RowDataPacket;
-
-// 定义数据库连接配置接口
-export interface DatabaseConfig extends PoolOptions {
-  host: string;
-  user: string;
-  password: string;
-  database: string;
-  waitForConnections?: boolean;
-  connectionLimit?: number;
-  queueLimit?: number;
-}
-
-// 从环境变量获取数据库配置，提供默认值
-const dbConfig: DatabaseConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'byzy',
-  waitForConnections: true,
-  connectionLimit: 10, // 连接池中的最大连接数
-  queueLimit: 0, // 没有限制
-};
+// 拆分类型：查询结果为行数据数组，写操作结果为UpsertResult
+export type QueryResult<T> = T[]; // SELECT等查询操作返回的结果集
+export type WriteResult = UpsertResult; // INSERT/UPDATE/DELETE等写操作返回的结果
 
 // 创建连接池
-const pool: Pool = mysql.createPool(dbConfig).promise();
+export const pool: Pool = mariadb.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '!fyh3759MYSQL',
+  database: process.env.DB_NAME || 'byzy',
+  connectionLimit: 5
+});
 
-// 测试数据库连接
-export const testConnection = async (): Promise<void> => {
+// 执行查询（明确返回查询结果数组）
+export const executeQuery = async <T>(sql: string, params: any[] = []): Promise<QueryResult<T>> => {
   try {
-    const connection = await pool.getConnection();
-    connection.release();
+    const result = await pool.execute<T[]>(sql, params);
+    return result as QueryResult<T>;
   } catch (error) {
-    console.error('Database connection failed:', error);
-    throw new Error('Unable to connect to the database');
+    console.error('Query error:', error);
+    throw new Error(`Query failed: ${(error as Error).message}`);
   }
 };
 
-/**
- * 执行SQL查询（修复核心：正确返回rows数组）
- * @param sql SQL语句
- * @param params 查询参数
- * @returns 对于SELECT返回rows数组；对于INSERT/UPDATE/DELETE返回结果对象
- */
-export async function executeQuery<T>(sql: string, params: any[] = []): Promise<T> {
+// 执行写操作（明确返回UpsertResult）
+export const executeWrite = async (sql: string, params: any[] = []): Promise<WriteResult> => {
   try {
-    const [result] = await pool.execute(sql, params); // ✅ 解构出result（rows或ResultSetHeader）
-    // console.log('SQL执行结果:', result); // 调试用：查看返回格式
-    return result as T;
+    const result = await pool.execute<UpsertResult>(sql, params);
+    return result as WriteResult;
   } catch (error) {
-    console.error('Database query error:', error);
-    throw new Error(`Database query failed: ${(error as Error).message}`);
+    console.error('Write operation error:', error);
+    throw new Error(`Write failed: ${(error as Error).message}`);
   }
-}
+};
 
-// 执行事务的辅助函数
+// 事务处理（同时支持查询和写操作）
 export const executeTransaction = async (
-  queries: Array<{ sql: string; params: any[] }>
-): Promise<MySqlResult[]> => { // 明确返回 MySqlResult 数组
-  const connection = await pool.getConnection();
+  queries: Array<{ sql: string; params: any[]; isWrite?: boolean }>
+): Promise<(QueryResult<any> | WriteResult)[]> => {
+  const connection: PoolConnection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const results: MySqlResult[] = []; // 定义结果数组类型
+    const results: (QueryResult<any> | WriteResult)[] = [];
     for (const query of queries) {
-      const [result] = await connection.execute(query.sql, query.params);
-      results.push(result as MySqlResult);
+      const result = query.isWrite
+        ? await connection.execute<UpsertResult>(query.sql, query.params)
+        : await connection.execute<any[]>(query.sql, query.params);
+      results.push(result);
     }
     await connection.commit();
     return results;
@@ -91,6 +60,17 @@ export const executeTransaction = async (
   }
 };
 
-// 导出连接池和配置
-export { pool, dbConfig };
-export default pool;
+// 测试连接
+export const testConnection = async (): Promise<boolean> => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.ping();
+    return true;
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    throw error;
+  } finally {
+    if (connection) connection.release();
+  }
+};

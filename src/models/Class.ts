@@ -1,4 +1,4 @@
-import { executeQuery } from '../config/database';
+import { executeQuery, executeWrite, QueryResult, WriteResult } from '../config/database';
 import { Class } from '../types/gradeClass.types';
 
 class ClassModel {
@@ -10,14 +10,14 @@ class ClassModel {
       INSERT INTO classes (name, class_order, grade_id, created_at, updated_at)
       VALUES (?, ?, ?, NOW(), NOW())
     `;
-    const result = await executeQuery<{ insertId: number }>(sql, [
+    const result: WriteResult = await executeWrite(sql, [
       data.name,
       data.class_order,
       data.grade_id
     ]);
 
     return {
-      id: result.insertId,
+      id: result.insertId as number,
       ...data,
       created_at: new Date(),
       updated_at: new Date()
@@ -35,7 +35,7 @@ class ClassModel {
       VALUES ${classes.map(() => '(?, ?, ?, NOW(), NOW())').join(',')}
     `;
     const params = classes.flatMap(cls => [cls.name, cls.class_order, cls.grade_id]);
-    await executeQuery(sql, params);
+    await executeWrite(sql, params);
   }
 
   /**
@@ -48,7 +48,7 @@ class ClassModel {
     WHERE grade_id = ?
     ORDER BY id ASC
   `;
-    return executeQuery<Class[]>(sql, [gradeId]);
+    return executeQuery<Class>(sql, [gradeId]);
   }
 
   /**
@@ -69,7 +69,7 @@ class ClassModel {
       WHERE id = ?
     `;
     const params = [...Object.values(data).filter(val => val !== undefined), id];
-    await executeQuery(sql, params);
+    await executeWrite(sql, params);
 
     return this.findById(id);
   }
@@ -83,7 +83,7 @@ class ClassModel {
       FROM classes
       WHERE id = ?
     `;
-    const rows = await executeQuery<Class[]>(sql, [id]);
+    const rows = await executeQuery<Class>(sql, [id]);
     return rows.length > 0 ? rows[0] : null;
   }
 
@@ -92,7 +92,7 @@ class ClassModel {
    */
   static async deleteByGradeId(gradeId: number): Promise<void> {
     const sql = 'DELETE FROM classes WHERE grade_id = ?';
-    await executeQuery(sql, [gradeId]);
+    await executeWrite(sql, [gradeId]);
   }
 
   /**
@@ -100,7 +100,7 @@ class ClassModel {
    */
   static async deleteByGradeIdExcluding(gradeId: number, keepIds: number[]): Promise<void> {
     const sql = `DELETE FROM classes WHERE grade_id = ? AND id NOT IN (${keepIds.map(() => '?').join(',')})`;
-    await executeQuery(sql, [gradeId, ...keepIds]);
+    await executeWrite(sql, [gradeId, ...keepIds]);
   }
 
   /**
@@ -108,7 +108,7 @@ class ClassModel {
    */
   static async delete(id: number): Promise<boolean> {
     const sql = 'DELETE FROM classes WHERE id = ?';
-    const result = await executeQuery<{ affectedRows: number }>(sql, [id]);
+    const result: WriteResult = await executeWrite(sql, [id]);
     return result.affectedRows > 0;
   }
 }

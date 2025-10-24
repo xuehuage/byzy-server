@@ -1,6 +1,5 @@
 // src/types/database.types.ts
 
-import { RowDataPacket } from "mysql2";
 import { School } from "./school.types";
 
 // 通用时间戳字段，几乎所有表都有
@@ -51,7 +50,7 @@ export interface ManufacturerWithSchools extends Manufacturer {
 
 
 // 定义数据库返回的用户行结构（与表字段完全一致）
-export interface UserRow extends RowDataPacket, Timestamps {
+export interface UserRow extends Timestamps {
   id: number;
   username: string;
   password: string;

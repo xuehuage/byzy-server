@@ -4,8 +4,8 @@ import UserModel, { mapRowToUserWithoutPassword } from '../models/User';
 import { generateToken } from '../utils/jwt';
 import { User, UserRole, Status, CreateUserRequest, AuthResponse, UserRow, UserWithoutPassword } from '../types';
 import { executeTransaction } from '../config/database';
-import { OkPacket, RowDataPacket } from 'mysql2';
 import { sendError } from '../utils/apiResponse';
+import { UpsertResult } from 'mariadb/*';
 
 // 密码加密的盐值强度
 const SALT_ROUNDS = 10;
@@ -58,7 +58,7 @@ const authService = {
         }
       ];
 
-      const results = await executeTransaction(transactionQueries) as [OkPacket, UserRow[]];
+      const results = await executeTransaction(transactionQueries) as [UpsertResult, UserRow[]];
       const [insertResult, selectResults] = results;
 
       if (!insertResult.insertId || selectResults.length === 0) {

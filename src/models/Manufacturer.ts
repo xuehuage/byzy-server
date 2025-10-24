@@ -1,11 +1,11 @@
 // src/models/Manufacturer.ts
-import { RowDataPacket, ResultSetHeader, OkPacket } from 'mysql2';
+import { WriteResult, QueryResult, executeWrite } from '../config/database';
 import { executeQuery } from '../config/database';
 import { CreateManufacturerRequest, Manufacturer, ManufacturerWithSchools, Status } from '../types';
 import SchoolModel from './School';
 
 // 定义厂商行数据类型
-interface ManufacturerRow extends Manufacturer, RowDataPacket { }
+interface ManufacturerRow extends Manufacturer { }
 
 type UpdateManufacturerRequest = Omit<Manufacturer, 'created_at' | 'updated_at'>
 
@@ -28,9 +28,9 @@ const ManufacturerModel = {
     ];
 
     try {
-      // 执行INSERT，获取结果（ResultSetHeader包含insertId）
-      const result = await executeQuery<ResultSetHeader>(query, params);
-      const insertId = result.insertId;
+      // 修复：INSERT是写操作，应使用executeWrite
+      const result: WriteResult = await executeWrite(query, params);
+      const insertId = result.insertId as number;
 
       // 查询新创建的厂商
       const newManufacturer = await this.findById(insertId);
@@ -53,7 +53,7 @@ const ManufacturerModel = {
 
     try {
       // 执行查询，返回的是rows数组（ManufacturerRow[]）
-      const rows = await executeQuery<ManufacturerRow[]>(query, [id]);
+      const rows = await executeQuery<ManufacturerRow>(query, [id]);
 
       // rows是数组，取第一个元素（若存在）
       return rows.length > 0 ? rows[0] : null;
@@ -72,7 +72,7 @@ const ManufacturerModel = {
     const query = 'SELECT * FROM manufacturers';
 
     try {
-      const rows = await executeQuery<ManufacturerRow[]>(query);
+      const rows = await executeQuery<ManufacturerRow>(query);
       return rows; // 直接返回rows数组（本身是可迭代的）
     } catch (error) {
       console.error('查询所有厂商失败:', error);
@@ -89,7 +89,7 @@ const ManufacturerModel = {
     const query = 'SELECT * FROM manufacturers';
 
     try {
-      const rows = await executeQuery<ManufacturerRow[]>(query);
+      const rows = await executeQuery<ManufacturerRow>(query);
 
       const manufacturersWithSchools = await Promise.all(
         rows.map(async (manufacturer) => {
@@ -147,9 +147,8 @@ const ManufacturerModel = {
     ];
 
     try {
-      // 执行更新并
-      await executeQuery<OkPacket>(sql, params);
-      // 返回更新更新后的完整信息
+      // 修复：UPDATE是写操作，应使用executeWrite
+      await executeWrite(sql, params);
       return this.findById(id);
     } catch (error) {
       console.error('Error updating manufacturer:', error);
@@ -163,8 +162,7 @@ const ManufacturerModel = {
     const query = 'DELETE FROM manufacturers WHERE id = ?';
 
     try {
-      const result = await executeQuery<OkPacket>(query, [manufacturerId]);
-      // affectedRows 为1表示删除成功
+      const result: WriteResult = await executeWrite(query, [manufacturerId]);
       return result.affectedRows === 1;
     } catch (error) {
       console.error('Error deleting manufacturer from database:', error);
@@ -198,7 +196,7 @@ const ManufacturerModel = {
     query += ' ORDER BY created_at DESC';
 
     try {
-      const rows = await executeQuery<ManufacturerRow[]>(query, queryParams);
+      const rows = await executeQuery<ManufacturerRow>(query, queryParams);
       if (rows.length === 0) return rows
       const manufacturersWithSchools = await Promise.all(
         rows.map(async (manufacturer) => {
