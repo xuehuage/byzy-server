@@ -212,6 +212,8 @@ class StudentModel {
     INNER JOIN classes c ON s.class_id = c.id
     INNER JOIN grades g ON c.grade_id = g.id
     INNER JOIN schools sch ON g.school_id = sch.id
+    LEFT JOIN student_uniform_orders suo ON s.id = suo.student_id
+    LEFT JOIN school_uniforms su ON suo.school_uniform_id = su.id
     ${whereClause}
     ORDER BY s.created_at DESC  
     LIMIT ? OFFSET ?
@@ -300,6 +302,8 @@ class StudentModel {
     INNER JOIN classes c ON s.class_id = c.id
     INNER JOIN grades g ON c.grade_id = g.id
     INNER JOIN schools sch ON g.school_id = sch.id
+    LEFT JOIN student_uniform_orders suo ON s.id = suo.student_id
+    LEFT JOIN school_uniforms su ON suo.school_uniform_id = su.id
     ${whereClause}
   `);
 

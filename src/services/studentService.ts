@@ -84,15 +84,16 @@ export const getStudentsByCascade = async (params: StudentQueryParams) => {
     const whereParts: string[] = [];
     const queryParams: any[] = [];
 
-    if (params.schoolId !== undefined) {
-        whereParts.push('g.school_id = ?'); // 正确：用?占位
-        queryParams.push(params.schoolId); // 参数单独存储，不直接拼入SQL
+    // 修复：调整条件优先级为 classId > gradeId > schoolId（更具体的条件优先）
+    if (params.classId !== undefined) {
+        whereParts.push('s.class_id = ?');
+        queryParams.push(params.classId);
     } else if (params.gradeId !== undefined) {
         whereParts.push('c.grade_id = ?');
         queryParams.push(params.gradeId);
-    } else if (params.classId !== undefined) {
-        whereParts.push('s.class_id = ?');
-        queryParams.push(params.classId);
+    } else if (params.schoolId !== undefined) {
+        whereParts.push('g.school_id = ?');
+        queryParams.push(params.schoolId);
     } else {
         throw new Error('至少需要提供schoolId、gradeId或classId中的一个');
     }
@@ -112,8 +113,9 @@ export const getStudentsByCascade = async (params: StudentQueryParams) => {
 
     // 打印Service层生成的条件和参数（关键调试）
     console.log('===== Service层调试 =====');
-    console.log('whereClause（带占位符）:', whereClause); // 应输出 "WHERE g.school_id = ?"
-    console.log('queryParams:', queryParams); // 应输出 [1]
+    console.log('whereClause（带占位符）:', whereClause);
+    console.log('queryParams:', queryParams);
+
 
     // 强制转换并校验分页参数（关键修复）
     const limit = Math.max(1, Math.min(100, Number(params.pageSize)));
@@ -129,9 +131,9 @@ export const getStudentsByCascade = async (params: StudentQueryParams) => {
 
     // 打印参数类型（新增调试）
     console.log('===== 参数类型调试 =====');
-    console.log('queryParams类型:', queryParams.map(p => typeof p)); // 应全为'number'
-    console.log('limit类型:', typeof limit, '值:', limit); // 应为'number'
-    console.log('offset类型:', typeof offset, '值:', offset); // 应为'number'
+    console.log('queryParams类型:', queryParams.map(p => typeof p));
+    console.log('limit类型:', typeof limit, '值:', limit);
+    console.log('offset类型:', typeof offset, '值:', offset);
 
     // 调用Model层
     return await StudentModel.queryByCascade(whereClause, queryParams, limit, offset);
