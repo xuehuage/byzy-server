@@ -105,6 +105,7 @@ export interface StudentRawRecord {
 
 /** 合并后的订单信息（包含对应的校服信息） */
 export interface StudentOrder {
+    id?: number //继承自uniform_orders
     order_id: number;
     order_type: number;
     payment_status: number;

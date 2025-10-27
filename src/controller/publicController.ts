@@ -24,7 +24,7 @@ export const getPublicSchoolDetail = async (req: Request, res: Response) => {
 };
 
 /**
- * 获取公开的学校详情（不含敏感信息）
+ * 获取学生订单信息
  */
 export const getPublicStudent = async (req: Request, res: Response) => {
     try {

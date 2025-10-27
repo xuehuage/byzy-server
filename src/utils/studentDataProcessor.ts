@@ -70,7 +70,8 @@ export function mergeStudentOrders(originalData: StudentRawRecord[]): MergedStud
                 uniform_price: item.uniform_price!,
                 is_online: item.is_online!,
                 uniform_status: item.uniform_status!,
-                uniform_school_id: item.uniform_school_id!
+                uniform_school_id: item.uniform_school_id!,
+
             };
 
             // 添加到学生的订单数组

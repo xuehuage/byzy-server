@@ -1,7 +1,7 @@
 import { executeQuery, executeWrite, WriteResult } from '../config/database';
 import { StudentUniform, UniformStatistic } from '../types/studentUniform.types';
 import { PaymentStatus } from '../types/database.types';
-import { StudentOrder } from '../types/studentQuery.types';
+import { StudentOrder } from '../types/student.types';
 
 class StudentUniformModel {
   /**
@@ -84,6 +84,7 @@ class StudentUniformModel {
   static async findByStudentIdWithPrice(studentId: number): Promise<StudentOrder[]> {
     const sql = `
             SELECT 
+      suo.id, 
       suo.student_id, 
       suo.size, 
       suo.quantity, 

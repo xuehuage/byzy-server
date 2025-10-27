@@ -19,3 +19,29 @@ export const formatBigInt = (data: any): any => {
     }
     return data;
 };
+
+
+export const formatUniformType = (val: number): string => {
+    let text = '校服';
+    switch (val) {
+        case 1:
+            text = '夏装'
+            break;
+        case 2:
+            text = '春秋装'
+            break;
+        case 3:
+            text = '冬装'
+            break;
+        case 4:
+            text = '夏装上衣'
+            break;
+        case 5:
+            text = '秋装上衣'
+            break;
+        default:
+            break;
+
+    }
+    return text;
+}

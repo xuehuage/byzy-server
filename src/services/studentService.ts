@@ -18,13 +18,16 @@ export const createStudent = async (studentData: Omit<Student, 'id' | 'created_a
  * @returns 学生信息及关联订单
  */
 export const getStudentByidCard = async (idCard: string): Promise<StudentByIdCardResult | null> => {
+    console.log('id_card:', idCard)
     // 1. 查询学生基本信息
     const student = await StudentModel.findByidCard(idCard);
+    console.log('student:', student)
+
     if (!student) return null;
 
     // 2. 查询学生订单信息（含金额计算）
     const orders = await StudentUniformModel.findByStudentIdWithPrice(student.id);
-
+    console.log('orders:', orders)
     return {
         student,
         orders

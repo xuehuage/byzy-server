@@ -6,19 +6,18 @@ import { activateTerminal } from './src/services/terminalService';
 dotenv.config();
 
 // 激活参数（可根据实际设备ID修改）
-const DEVICE_ID = 'byzy_pc'; // 设备唯一标识
 
 // 执行激活
 const run = async () => {
     try {
         // 测试数据库连接
-        console.log('测试数据库连接...');
-        const isConnected = await testConnection();
-        if (!isConnected) throw new Error('数据库连接失败');
+        // console.log('测试数据库连接...');
+        // const isConnected = await testConnection();
+        // if (!isConnected) throw new Error('数据库连接失败');
 
         // 执行激活
-        console.log(`开始激活设备：${DEVICE_ID}`);
-        const terminal = await activateTerminal(DEVICE_ID);
+        console.log(`开始激活设备：${process.env.DEVICE_ID}`);
+        const terminal = await activateTerminal(process.env.DEVICE_ID || 'byzy_pc_01');
 
         // 输出结果
         console.log('激活成功！终端信息：');
@@ -26,7 +25,6 @@ const run = async () => {
             device_id: terminal.device_id,
             terminal_sn: terminal.terminal_sn,
             activated_at: terminal.activated_at,
-            expires_at: terminal.expires_at
         });
     } catch (error) {
         console.error('激活失败：', (error as Error).message);

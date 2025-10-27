@@ -7,6 +7,11 @@ import { sendError } from './apiResponse';
 // 第三方接口基础URL
 const BASE_URL = 'https://vsi-api.shouqianba.com';
 
+axios.interceptors.request.use(config => {
+    console.log('实际发送的headers:', config.headers);
+    return config;
+});
+
 /**
  * 发送第三方请求
  * @param path 接口路径（如'/upay/v2/pay'）
@@ -33,12 +38,13 @@ export const requestThirdParty = async (
             url: `${BASE_URL}${path}`,
             method: 'POST',
             headers: {
+                'Authorization': sn + " " + sign,
                 'Content-Type': 'application/json',
-                'Authorization': `${sn} ${sign}` // 签名头
-            },
-            data: data // axios会自动将对象转为JSON，保持与body一致
-        };
 
+            },
+            data: data
+        };
+        console.log('请求配置:', config)
         // 4. 发送请求并返回响应
         const response: AxiosResponse = await axios(config);
         return response.data;
