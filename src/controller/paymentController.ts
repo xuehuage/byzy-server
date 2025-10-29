@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { sendError, sendSuccess } from '../utils/apiResponse';
 import { getStudentByidCard } from '../services/studentService';
 import { createPrepayment, searchPaymentStatus as servicePamentStatus } from '../services/paymentService';
-import { createTempMergedOrder } from '../services/mergedOrderService';
+import { createTempMergedOrder, migrateToFormalOrder } from '../services/mergedOrderService';
 import { formatUniformType } from '../utils/formatter';
 
 // 预下单参数验证规则
@@ -100,6 +100,19 @@ export const searchPaymentStatus = async (req: Request, res: Response) => {
     try {
 
         const responseData = await servicePamentStatus(client_sn)
+
+        // 解析第三方返回的order_status
+        const orderStatus = responseData.biz_response?.data?.order_status;
+
+        // 处理支付成功（PAID）
+        if (orderStatus === 'PAID') {
+            // 调用迁移方法：删除临时订单、生成正式订单、更新原始订单
+            await migrateToFormalOrder(
+                client_sn,
+                new Date(), // 支付时间（可从第三方返回的pay_time提取，此处示例用当前时间）
+                responseData.biz_response.data?.transaction_id // 第三方流水号
+            );
+        }
 
         sendSuccess(res, responseData, '预下单成功');
     } catch (error) {

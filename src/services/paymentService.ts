@@ -55,7 +55,7 @@ export const createPrepayment = async (params: PrecreateParams) => {
     return result;
 };
 
-export const searchPaymentStatus = async (clientSn: string): Promise<void> => {
+export const searchPaymentStatus = async (clientSn: string): Promise<any> => {
     const terminal = await TerminalModel.findByDeviceId();
     console.log('serchPaymentStatus获取终端信息:', terminal)
     if (!terminal || !terminal.terminal_sn || !terminal.terminal_key) {
