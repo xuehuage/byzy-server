@@ -19,6 +19,16 @@ export interface School extends Timestamps {
   classes?: Class[]; // 新增班级数组
 }
 
+export interface SchoolUniformResult extends Timestamps {
+  'gender_type': number; // -- 1=男款，2=女款
+  'id': number;
+  'is_online': number;
+  'price': number;
+  'school_id': number;
+  'status': number;
+  'uniform_type': number; // -- 1=夏装，2=春秋装，3=冬装
+}
+
 export enum UniformType {
   SUMMER_SET = 1, // 夏装
   SPRING_AUTUMN_SET = 2, // 春秋装

@@ -8,7 +8,6 @@ import { sendError } from './apiResponse';
 const BASE_URL = 'https://vsi-api.shouqianba.com';
 
 axios.interceptors.request.use(config => {
-    console.log('实际发送的headers:', config.headers);
     return config;
 });
 

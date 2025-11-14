@@ -10,6 +10,7 @@ export interface StudentUniform extends Timestamps {
     quantity: number; // 购买数量
     size: string; // 购买尺码
     uniform_type: UniformType; // 校服类型
+    total_amount: number;
     payment_status: PaymentStatus; // 付款状态（paid/unpaid/pending）
 }
 

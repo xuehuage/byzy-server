@@ -57,20 +57,17 @@ export const createPrepayment = async (params: PrecreateParams) => {
 
 export const searchPaymentStatus = async (clientSn: string): Promise<any> => {
     const terminal = await TerminalModel.findByDeviceId();
-    console.log('serchPaymentStatus获取终端信息:', terminal)
     if (!terminal || !terminal.terminal_sn || !terminal.terminal_key) {
         throw new Error('终端信息不完整');
     }
 
-    // 2. 构造第三方请求参数
     const thirdPartyData = {
         terminal_sn: terminal.terminal_sn,
         client_sn: clientSn,
     };
-    console.log('serchPaymentStatus构造第三方请求参数:', thirdPartyData)
-    // 3. 调用第三方预下单接口
+    // 调用第三方查询接口
     const result = await requestThirdParty(
-        '/upay/v2/query', // 预下单接口路径
+        '/upay/v2/query',
         thirdPartyData,
         terminal.terminal_sn,
         terminal.terminal_key

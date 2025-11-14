@@ -55,14 +55,13 @@ export const prepay = async (req: Request, res: Response) => {
         const subjectParts = unpaidOrders.map(order =>
             `${formatUniformType(order.uniform_type)}${order.quantity}套，尺码${order.size}`
         );
-        console.log('subjectParts:', subjectParts)
 
         const subject = subjectParts.join('；');
 
         // 6. 生成唯一商户订单号
         const clientSn = await createTempMergedOrder({
             studentId: student.id,
-            totalAmount: totalAmount, // 分
+            totalAmount, // 单位：分
             payway: payWay,
             subject,
             unpaidOrders
@@ -72,7 +71,7 @@ export const prepay = async (req: Request, res: Response) => {
         // 可根据业务场景从请求或配置获取
         const thirdPartyResult = await createPrepayment({
             clientSn,
-            totalAmount, // 分
+            totalAmount, // 单位：分
             subject,
             payway: payWay.toString(),
         });

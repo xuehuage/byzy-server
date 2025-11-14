@@ -1,6 +1,5 @@
 // 学生相关类型定义
 import { PaymentStatus, Timestamps } from './database.types';
-import { Class } from './gradeClass.types';
 import { UniformType } from './school.types';
 
 // 性别枚举

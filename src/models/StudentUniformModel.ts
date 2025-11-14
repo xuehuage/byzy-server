@@ -2,6 +2,7 @@ import { executeQuery, executeWrite, WriteResult } from '../config/database';
 import { StudentUniform, UniformStatistic } from '../types/studentUniform.types';
 import { PaymentStatus } from '../types/database.types';
 import { StudentOrder } from '../types/student.types';
+import { SchoolUniformResult } from '../types/school.types';
 
 class StudentUniformModel {
   /**
@@ -10,22 +11,38 @@ class StudentUniformModel {
    * @returns 创建的记录
    */
   static async create(data: Omit<StudentUniform, 'id' | 'created_at' | 'updated_at'>): Promise<StudentUniform> {
+    // 1. 查询对应校服的单价
+    const uniform = await executeQuery<SchoolUniformResult>(
+      'SELECT price FROM school_uniforms WHERE id = ?',
+      [data.school_uniform_id]
+    );
+    if (uniform.length === 0) {
+      throw new Error('校服信息不存在');
+    }
+    const price = uniform[0].price;
+    // 2. 计算总金额
+    const totalAmount = data.quantity * price;
+
+    // 3. 插入订单时包含total_amount
     const sql = `
-      INSERT INTO student_uniform_orders (  -- 表名修正为 student_uniform_orders
-        student_id, school_uniform_id, quantity, size, payment_status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-    `;
+    INSERT INTO student_uniform_orders (
+      student_id, school_uniform_id, quantity, size, payment_status, 
+      total_amount, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+  `;
     const result: WriteResult = await executeWrite(sql, [
       data.student_id,
-      data.school_uniform_id,  // 注意：此处需后续同步修改类型定义中的字段名（uniform_id → school_uniform_id）
+      data.school_uniform_id,
       data.quantity,
       data.size,
-      data.payment_status
+      data.payment_status,
+      totalAmount // 存入计算后的总金额
     ]);
 
     return {
       id: result.insertId as number,
       ...data,
+      total_amount: totalAmount, // 补充到返回结果
       created_at: new Date(),
       updated_at: new Date()
     };
