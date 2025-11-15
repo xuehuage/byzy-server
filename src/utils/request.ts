@@ -43,7 +43,6 @@ export const requestThirdParty = async (
             },
             data: data
         };
-        console.log('请求配置:', config)
         // 4. 发送请求并返回响应
         const response: AxiosResponse = await axios(config);
         return response.data;

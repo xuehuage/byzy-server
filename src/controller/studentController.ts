@@ -7,7 +7,6 @@ import { StudentQueryParams } from '../types/student.types';
 
 // 级联查询学生信息的控制器方法
 export const getStudentsByCascadeController = async (req: Request, res: Response) => {
-    console.log("params:", req.query)
     try {
         // 1. 解析并转换请求参数（HTTP层处理）
         const params: StudentQueryParams = {

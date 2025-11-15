@@ -10,13 +10,7 @@ dotenv.config();
 // 执行激活
 const run = async () => {
     try {
-        // 测试数据库连接
-        // console.log('测试数据库连接...');
-        // const isConnected = await testConnection();
-        // if (!isConnected) throw new Error('数据库连接失败');
 
-        // 执行激活
-        console.log(`开始激活设备：${process.env.DEVICE_ID}`);
         const terminal = await activateTerminal(process.env.DEVICE_ID || 'byzy_pc_01');
 
         // 输出结果

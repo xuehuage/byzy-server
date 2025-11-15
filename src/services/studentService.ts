@@ -18,16 +18,13 @@ export const createStudent = async (studentData: Omit<Student, 'id' | 'created_a
  * @returns 学生信息及关联订单
  */
 export const getStudentByidCard = async (idCard: string): Promise<StudentByIdCardResult | null> => {
-    console.log('id_card:', idCard)
     // 1. 查询学生基本信息
     const student = await StudentModel.findByidCard(idCard);
-    console.log('student:', student)
 
     if (!student) return null;
 
     // 2. 查询学生订单信息（含金额计算）
     const orders = await StudentUniformModel.findByStudentIdWithPrice(student.id);
-    console.log('orders:', orders)
     return {
         student,
         orders
@@ -114,10 +111,7 @@ export const getStudentsByCascade = async (params: StudentQueryParams) => {
     // 生成whereClause（带?占位符）
     const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
 
-    // 打印Service层生成的条件和参数（关键调试）
-    console.log('===== Service层调试 =====');
-    console.log('whereClause（带占位符）:', whereClause);
-    console.log('queryParams:', queryParams);
+
 
 
     // 强制转换并校验分页参数（关键修复）
@@ -132,11 +126,7 @@ export const getStudentsByCascade = async (params: StudentQueryParams) => {
         throw new Error(`查询参数包含无效值：${JSON.stringify(queryParams)}`);
     }
 
-    // 打印参数类型（新增调试）
-    console.log('===== 参数类型调试 =====');
-    console.log('queryParams类型:', queryParams.map(p => typeof p));
-    console.log('limit类型:', typeof limit, '值:', limit);
-    console.log('offset类型:', typeof offset, '值:', offset);
+
 
     // 调用Model层
     return await StudentModel.queryByCascade(whereClause, queryParams, limit, offset);

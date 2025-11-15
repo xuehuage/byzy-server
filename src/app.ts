@@ -1,4 +1,3 @@
-
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,40 +9,50 @@ import rateLimit from 'express-rate-limit';
 import { testConnection } from './config/database';
 import routes from './routes';
 import { sendError } from './utils/apiResponse';
-
-
-// 调试：打印加载的环境变量（仅开发环境使用，生产环境需删除）
-console.log('✅ dotenv 加载的环境变量：');
-console.log('PORT:', process.env.PORT);
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
-console.log('GUEST_CLIENT_URL:', process.env.GUEST_CLIENT_URL);
+import { createServer } from 'http';
+import { initWebSocketServer } from './services/websocketService';
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 3000;
 
+// 创建HTTP服务器
+const server = createServer(app);
+
+// 初始化WebSocket服务器
+initWebSocketServer(server);
+
 // 安全中间件
-app.use(helmet()); // 增加HTTP头安全性
-// 重点：配置CORS，关联.env中的前端地址
+app.use(helmet());
+
+// CORS配置
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || '',
     'http://localhost:3001',
-    process.env.GUEST_CLIENT_URL || '*' //游客客户端域名
-  ], // 仅允许前端地址跨域（替代默认的 "*"）
-  methods: process.env.CORS_ALLOW_METHODS?.split(',') || ['GET', 'POST'], // 允许的HTTP方法
-  allowedHeaders: process.env.CORS_ALLOW_HEADERS?.split(',') || ['Content-Type'], // 允许的请求头
-  credentials: process.env.CORS_CREDENTIALS === 'true' // 是否允许跨域传递凭证
+    process.env.GUEST_CLIENT_URL || '*'
+  ],
+  methods: process.env.CORS_ALLOW_METHODS?.split(',') || ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: process.env.CORS_ALLOW_HEADERS?.split(',') || ['Content-Type', 'Authorization'],
+  credentials: process.env.CORS_CREDENTIALS === 'true'
 }));
 
-// 请求限制（防止暴力攻击）
+// 请求限制
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100, // 每个IP限制100个请求
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api/auth', limiter); // 仅对认证接口应用限制
+app.use('/api/auth', limiter);
+
+// 保留原始请求体（用于签名验证等）- 必须放在最前面
+app.use(express.json({
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+
+
 
 // 解析JSON请求体
 app.use(express.json());
@@ -52,9 +61,18 @@ app.use(express.urlencoded({ extended: true }));
 // 路由
 app.use('/api', routes);
 
+// 通用健康检查
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'payment-callback-service'
+  });
+});
+
 // 根路由
 app.get('/', (req, res) => {
-  res.send('School Uniform Management System API is running');
+  res.send('Payment Callback API Service is Running');
 });
 
 // 404处理
@@ -64,21 +82,24 @@ app.use((req, res) => {
 
 // 错误处理中间件
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  console.error('❌ 服务器错误:', err.stack);
   sendError(res, 'Internal server error', 500);
 });
 
-// 测试数据库连接并启动服务器
+// 启动服务器
 testConnection()
   .then(() => {
-    console.log('Database connection established');
+    console.log('✅ 数据库连接成功');
 
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    server.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`🚀 服务器运行在端口: ${PORT}`);
+      console.log(`🔗 内网地址: http://localhost:${PORT}`);
+      console.log(`🌐 公网回调地址: https://joella-hydrometallurgical-consuela.ngrok-free.dev/api/public/payment/callback`);
+      console.log('✅ 服务已启动，等待收钱吧回调请求...\n');
     });
   })
   .catch((error) => {
-    console.error('Failed to connect to database:', error);
+    console.error('❌ 数据库连接失败:', error);
     process.exit(1);
   });
 

@@ -324,27 +324,23 @@ class SchoolModel {
     if (params.manufacturer_id !== undefined) {
       sql += ' AND manufacturer_id = ?';
       queryParams.push(params.manufacturer_id);
-      console.log('SQL条件：添加manufacturer_id =', params.manufacturer_id);
     }
 
     // 名称模糊搜索（存在则添加LIKE条件）
     if (params.name) {
       sql += ' AND name LIKE ?';
       queryParams.push(`%${params.name}%`); // 前后加%实现模糊匹配
-      console.log('SQL条件：添加name LIKE', `%${params.name}%`);
     }
 
     // 状态筛选（存在则添加条件）
     if (params.status !== undefined) {
       sql += ' AND status = ?';
       queryParams.push(params.status);
-      console.log('SQL条件：添加status =', params.status);
     }
 
     // 按创建时间排序
     sql += ' ORDER BY created_at DESC';
-    console.log('执行的SQL:', sql);
-    console.log('SQL参数:', queryParams);
+
 
     // 执行查询并处理结果
     const schools = await executeQuery<Omit<School, 'grades'>>(sql, queryParams)

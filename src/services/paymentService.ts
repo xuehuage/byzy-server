@@ -19,7 +19,6 @@ interface PrecreateParams {
 export const createPrepayment = async (params: PrecreateParams) => {
     // 1. 获取终端信息（用于签名）
     const terminal = await TerminalModel.findByDeviceId();
-    console.log('获取终端信息:', terminal)
     if (!terminal || !terminal.terminal_sn || !terminal.terminal_key) {
         throw new Error('终端信息不完整');
     }
@@ -31,9 +30,11 @@ export const createPrepayment = async (params: PrecreateParams) => {
         total_amount: params.totalAmount.toString(), // 分，字符串类型
         payway: params.payway,
         subject: params.subject,
-        operator: 'byzy_fyh'
+        operator: 'byzy_fyh',
+        notify_url: 'https://joella-hydrometallurgical-consuela.ngrok-free.dev/api/public/payment/callback'
+
     };
-    console.log('构造第三方请求参数:', thirdPartyData)
+
     // 3. 调用第三方预下单接口
     const result = await requestThirdParty(
         '/upay/v2/precreate', // 预下单接口路径
@@ -41,7 +42,6 @@ export const createPrepayment = async (params: PrecreateParams) => {
         terminal.terminal_sn,
         terminal.terminal_key
     );
-    console.log('第三方预下单接口返回值：', result)
 
     // 4. 校验第三方响应并更新临时订单的二维码
     if (result.result_code !== '200' || result.biz_response.result_code !== 'PRECREATE_SUCCESS') {
@@ -72,6 +72,5 @@ export const searchPaymentStatus = async (clientSn: string): Promise<any> => {
         terminal.terminal_sn,
         terminal.terminal_key
     );
-    console.log('serchPaymentStatus第三方预下单接口返回值：', result)
     return result;
 }

@@ -21,7 +21,6 @@ export const activateTerminal = async (deviceId: string): Promise<Terminal> => {
         code: process.env.VENDOR_CODE, // 第三方要求的激活码
         device_id: deviceId,
     };
-    console.log('激活参数activateParams：', activateParams)
     // 3. 调用第三方激活接口（使用vendor_sn和vendor_key签名）
     const thirdPartyResponse = await requestThirdParty(
         '/terminal/activate', // 激活接口路径
@@ -29,7 +28,6 @@ export const activateTerminal = async (deviceId: string): Promise<Terminal> => {
         vendorSn,
         vendorKey
     );
-    console.log('thirdPartyResponse:', thirdPartyResponse)
 
     // 4. 处理第三方响应（假设响应格式：{ code: 0, message: 'success', terminal_sn: 'xxx', terminal_key: 'xxx', expires_at: '2024-12-31 23:59:59' }）
     if (thirdPartyResponse.result_code !== '200') {

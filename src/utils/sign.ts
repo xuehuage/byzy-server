@@ -9,9 +9,5 @@ import crypto from 'crypto';
  */
 export const generateSign = (body: string, key: string): string => {
     const signStr = body + key;
-    console.log('signStr:', signStr)
-    const result = crypto.createHash('md5').update(signStr, 'utf8').digest('hex')
-    console.log('sign大写：', result.toUpperCase())
-    console.log('sign：', result)
     return crypto.createHash('md5').update(signStr, 'utf8').digest('hex').toUpperCase();
 };

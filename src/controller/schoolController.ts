@@ -77,7 +77,6 @@ export const schoolController = {
       let manufacturerId: number;
       if (currentUser.role === 'super_admin') {
         const queryId = Number(req.query.manufacturer_id);
-        console.log('req.query:', queryId)
         if (isNaN(queryId)) {
           return sendError(res, '参数id必须为数字', 400);
         }

@@ -5,6 +5,18 @@ import { getStudentByidCard } from '../services/studentService';
 import { createPrepayment, searchPaymentStatus as servicePamentStatus } from '../services/paymentService';
 import { createTempMergedOrder, migrateToFormalOrder } from '../services/mergedOrderService';
 import { formatUniformType } from '../utils/formatter';
+import crypto from 'crypto';
+import { notifyPaymentSuccess } from '../services/websocketService';
+
+const SHOUQIANBA_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5+MNqcjgw4bsSWhJfw2M
++gQB7P+pEiYOfvRmA6kt7Wisp0J3JbOtsLXGnErn5ZY2D8KkSAHtMYbeddphFZQJ
+zUbiaDi75GUAG9XS3MfoKAhvNkK15VcCd8hFgNYCZdwEjZrvx6Zu1B7c29S64LQP
+HceS0nyXF8DwMIVRcIWKy02cexgX0UmUPE0A2sJFoV19ogAHaBIhx5FkTy+eeBJE
+bU03Do97q5G9IN1O3TssvbYBAzugz+yUPww2LadaKexhJGg+5+ufoDd0+V3oFL0/
+ebkJvD0uiBzdE3/ci/tANpInHAUDIHoWZCKxhn60f3/3KiR8xuj2vASgEqphxT5O
+fwIDAQAB
+-----END PUBLIC KEY-----`
 
 // 预下单参数验证规则
 export const prepayValidation = [
@@ -35,7 +47,6 @@ export const prepay = async (req: Request, res: Response) => {
 
         // 3. 筛选未付款订单（payment_status=0）
         const unpaidOrders = orders.filter(order => order.payment_status === 0);
-        console.log('unpaidOrders:', unpaidOrders)
         if (unpaidOrders.length === 0) {
             return sendError(res, '无未付款订单', 400);
         }
@@ -45,7 +56,6 @@ export const prepay = async (req: Request, res: Response) => {
             (sum, order) => sum + Number(order.total_amount), // 转换为分
             0
         );
-        console.log('totalAmount:', totalAmount)
 
         if (totalAmount <= 0) {
             return sendError(res, '订单金额无效', 400);
@@ -119,3 +129,155 @@ export const searchPaymentStatus = async (req: Request, res: Response) => {
         sendError(res, (error as Error).message || '预下单失败', 500);
     }
 }
+
+// 修复公钥格式的函数
+function fixPublicKeyFormat(publicKey: string): string {
+
+    // 如果已经是正确的PEM格式，直接返回
+    if (publicKey.includes('-----BEGIN PUBLIC KEY-----') &&
+        publicKey.includes('-----END PUBLIC KEY-----')) {
+        return publicKey;
+    }
+
+    // 修复格式问题
+    let fixedKey = publicKey;
+
+    // 修复 BEGIN/END 标记
+    fixedKey = fixedKey.replace('---BEGIN PUBLIC KEY---', '-----BEGIN PUBLIC KEY-----');
+    fixedKey = fixedKey.replace('---END PUBLIC KEY---', '-----END PUBLIC KEY-----');
+
+    // 确保有正确的换行
+    if (!fixedKey.includes('\n')) {
+        const base64Content = fixedKey
+            .replace('-----BEGIN PUBLIC KEY-----', '')
+            .replace('-----END PUBLIC KEY-----', '')
+            .trim();
+
+        // 重新构建PEM格式，每64字符换行
+        const formattedContent = base64Content.match(/.{1,64}/g)?.join('\n') || base64Content;
+        fixedKey = `-----BEGIN PUBLIC KEY-----\n${formattedContent}\n-----END PUBLIC KEY-----`;
+    }
+
+    return fixedKey;
+}
+
+export const paymentCallback = async (req: Request, res: Response) => {
+    try {
+
+        // 1. 获取回调请求头中的签名
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader) {
+            return sendError(res, 'Missing Authorization header', 400);
+        }
+
+        // 2. 直接使用整个 Authorization 头作为 Base64 编码的签名
+        const sign = authHeader.trim();
+
+        // 3. 获取原始请求体
+        const rawBody = (req as any).rawBody;
+        if (!rawBody) {
+            return sendError(res, 'Missing raw body', 400);
+        }
+
+        const rawBodyString = rawBody.toString('utf8');
+
+        // 4. 使用 SHOUQIANBA_PUBLIC_KEY 进行 RSA SHA256 验签
+        let shouqianbaPublicKey = SHOUQIANBA_PUBLIC_KEY;
+
+        if (!shouqianbaPublicKey) {
+            return sendError(res, 'System configuration error', 500);
+        }
+
+        // 修复公钥格式
+        shouqianbaPublicKey = fixPublicKeyFormat(shouqianbaPublicKey);
+
+
+
+        // RSA SHA256 验签
+        let isValid = false;
+        let verifyError = null;
+
+        try {
+            const verify = crypto.createVerify('RSA-SHA256');
+            verify.update(rawBodyString, 'utf8');
+            verify.end();
+
+            const bytesSign = Buffer.from(sign, 'base64');
+
+            // 使用修复后的PEM格式公钥进行验签
+            isValid = verify.verify(shouqianbaPublicKey, bytesSign);
+
+        } catch (rsaError: any) {
+            verifyError = rsaError;
+
+        }
+
+
+
+
+        // 5. 处理业务逻辑 - 根据实际数据结构调整
+        const callbackData = req.body;
+
+        // 根据实际回调数据结构解析 - 直接使用根级字段
+        const {
+            client_sn,
+            order_status,
+            finish_time,  // 实际字段名是 finish_time
+            trade_no,     // 实际字段名是 trade_no
+            total_amount,
+            subject
+        } = callbackData;
+
+
+
+        if (!client_sn) {
+            return sendError(res, 'Missing client_sn in callback', 400);
+        }
+
+        // 处理支付成功逻辑
+        if (order_status === 'PAID') {
+            try {
+
+                // 调用迁移方法 - 使用正确的字段名
+                await migrateToFormalOrder(
+                    client_sn,
+                    finish_time ? new Date(parseInt(finish_time)) : new Date(),
+                    trade_no  // 使用 trade_no 作为交易号
+                );
+
+                // 通过WebSocket通知前端支付成功
+                const notificationData = {
+                    client_sn,
+                    order_status,
+                    pay_time: finish_time ? new Date(parseInt(finish_time)) : new Date(),
+                    transaction_id: trade_no,
+                    total_amount,
+                    subject,
+                    message: '支付成功'
+                };
+
+                const notified = notifyPaymentSuccess(client_sn, notificationData);
+                if (!notified) {
+                    console.warn(`⚠️ 客户端 ${client_sn} 未建立WebSocket连接`);
+                } else {
+                    console.log(`🔔 已发送WebSocket通知: ${client_sn}`);
+                }
+
+            } catch (migrationError) {
+                console.error('❌ 订单迁移失败:', migrationError);
+                // 即使迁移失败，也要返回成功给收钱吧，避免重复回调
+            }
+        } else {
+            console.log(`ℹ️ 订单状态非PAID: ${order_status}, client_sn: ${client_sn}`);
+        }
+
+        // 返回成功响应给收钱吧
+        sendSuccess(res, { result: 'SUCCESS' }, 'Callback processed successfully');
+
+    } catch (error) {
+        console.error('💥 回调处理异常:', error);
+        sendError(res, 'Callback processing failed', 500);
+    }
+};
+
