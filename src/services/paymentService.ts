@@ -31,7 +31,7 @@ export const createPrepayment = async (params: PrecreateParams) => {
         payway: params.payway,
         subject: params.subject,
         operator: 'byzy_fyh',
-        notify_url: 'https://fyh.nxwow.xyz/api/public/payment/callback'
+        notify_url: 'https://www.byzy.online/api/public/payment/callback'
 
     };
 

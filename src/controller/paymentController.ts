@@ -93,7 +93,8 @@ export const prepay = async (req: Request, res: Response) => {
             subject,
             sn: thirdPartyResult.biz_response.data.sn,
             client_sn: thirdPartyResult.biz_response.data.client_sn,
-            qr_code: thirdPartyResult.biz_response.data.qr_code
+            qr_code: thirdPartyResult.biz_response.data.qr_code,
+            qr_code_image_url: thirdPartyResult.biz_response.data.qr_code_image_url
         };
         console.error('构建响应参数:', responseData);
 
